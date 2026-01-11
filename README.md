@@ -15,7 +15,9 @@ A modern, interactive React application designed to help future Swiss homeowners
         -   **Indigo**: Pillar 3a (Restricted).
         -   **Green**: Pension Fund (Soft Equity).
     -   **Combined Tooltips**: Hover over charts to see exact values for specific dates.
+-   **New! Setup Assistant (Wizard)**: A step-by-step assistant toguide beginners through the process of setting up their calculation, explaining key concepts (like Pension Fund vs. Cash) along the way.
 -   **Target Date Planning**: Integrated custom **Month Picker** to easily set your buying horizon.
+-   **Helpful Hints**: Explanations for complex topics (e.g. Pension Fund employer contributions).
 
 ## Tech Stack
 
@@ -49,3 +51,4 @@ A modern, interactive React application designed to help future Swiss homeowners
 -   `src/components/GrowthChart.tsx`: Custom stacked area chart visualization.
 -   `src/components/MonthPicker.tsx`: Accessible month/year selection component.
 -   `src/components/DonutChart.tsx`: Equity composition chart.
+-   `src/components/Wizard.tsx`: Step-by-step setup assistant.

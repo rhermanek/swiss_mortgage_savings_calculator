@@ -5,6 +5,7 @@ import {
   Landmark,
   PiggyBank,
   Wallet,
+  Wand2,
 } from 'lucide-react'
 import { DonutChart } from './components/DonutChart'
 import { GrowthChart } from './components/GrowthChart'
@@ -12,6 +13,7 @@ import { MonthPicker } from './components/MonthPicker'
 import { SliderInput } from './components/SliderInput'
 import { ThemeProvider } from './components/ThemeProvider'
 import { ThemeToggle } from './components/ThemeToggle'
+import { Wizard, type WizardValues } from './components/Wizard'
 import logoUrl from './assets/logo.png'
 
 // Helper utilities (kept locally or could be imported if moved to utils)
@@ -149,8 +151,21 @@ function App() {
   const [pensionskasse, setPensionskasse] = useState<string>("60'000")
   const [andereVermoegen, setAndereVermoegen] = useState<string>("10'000")
 
+  const [isWizardOpen, setIsWizardOpen] = useState(false)
+
   const [saeule3aMonatlich, setSaeule3aMonatlich] = useState<string>('500')
   const [pensionskasseMonatlich, setPensionskasseMonatlich] = useState<string>('0')
+
+  const handleWizardComplete = (values: WizardValues) => {
+    setKaufpreis(values.kaufpreis)
+    setZielMonat(values.zielMonat)
+    setBarvermoegen(values.barvermoegen)
+    setSaeule3a(values.saeule3a)
+    setPensionskasse(values.pensionskasse)
+    setAndereVermoegen(values.andereVermoegen)
+    setSaeule3aMonatlich(values.saeule3aMonatlich)
+    setPensionskasseMonatlich(values.pensionskasseMonatlich)
+  }
 
   useEffect(() => {
     // Default: 24 months in the future (month selector expects yyyy-mm)
@@ -247,8 +262,33 @@ function App() {
                 </p>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsWizardOpen(true)}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-105 transition-all"
+              >
+                <Wand2 className="w-4 h-4" />
+                Assistent starten
+              </button>
+              <ThemeToggle />
+            </div>
           </div>
+
+          <Wizard
+            isOpen={isWizardOpen}
+            onClose={() => setIsWizardOpen(false)}
+            onComplete={handleWizardComplete}
+            initialValues={{
+              kaufpreis,
+              zielMonat,
+              barvermoegen,
+              saeule3a,
+              pensionskasse,
+              andereVermoegen,
+              saeule3aMonatlich,
+              pensionskasseMonatlich
+            }}
+          />
 
           <div className="grid gap-8 lg:grid-cols-2">
             {/* Left Column: Inputs */}
@@ -270,7 +310,7 @@ function App() {
                     value={kaufpreis}
                     onChange={setKaufpreis}
                     min={0}
-                    max={3000000}
+                    max={10000000}
                     step={10000}
                     icon={<Coins className="h-4 w-4" />}
                   />
