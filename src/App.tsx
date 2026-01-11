@@ -10,6 +10,7 @@ import { DonutChart } from './components/DonutChart'
 import { GrowthChart } from './components/GrowthChart'
 import { MonthPicker } from './components/MonthPicker'
 import { SliderInput } from './components/SliderInput'
+import logoUrl from './assets/logo.png'
 
 // Helper utilities (kept locally or could be imported if moved to utils)
 function clamp01(n: number) {
@@ -225,19 +226,22 @@ function App() {
   return (
     <div className="min-h-screen pb-20 font-sans text-slate-900">
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
-        <div className="flex flex-col gap-2 mb-10">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              Eigenmittel
-            </h1>
-            <Pill tone="info">
-              <Landmark className="h-4 w-4" />
-              Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel
-            </Pill>
+        <div className="flex items-center gap-6 mb-10">
+          <img src={logoUrl} alt="Logo" className="h-32 w-auto shrink-0" />
+          <div className="flex flex-col gap-2 w-full">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Eigenmittel
+              </h1>
+              <Pill tone="info">
+                <Landmark className="h-4 w-4" />
+                Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel
+              </Pill>
+            </div>
+            <p className="max-w-3xl text-lg text-slate-600">
+              Planen Sie Ihr Eigenheim in der Schweiz: Interaktiv und einfach.
+            </p>
           </div>
-          <p className="max-w-3xl text-lg text-slate-600">
-            Planen Sie Ihr Eigenheim in der Schweiz: Interaktiv und einfach.
-          </p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2">
