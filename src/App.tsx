@@ -1,23 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
-  CalendarClock,
-  CheckCircle2,
   Coins,
   Landmark,
   PiggyBank,
   Wallet,
 } from 'lucide-react'
+import { DonutChart } from './components/DonutChart'
+import { GrowthChart } from './components/GrowthChart'
+import { MonthPicker } from './components/MonthPicker'
+import { SliderInput } from './components/SliderInput'
 
-type MoneyInputProps = {
-  id: string
-  label: string
-  value: string
-  onChange: (next: string) => void
-  hint?: string
-  icon?: React.ReactNode
-}
-
+// Helper utilities (kept locally or could be imported if moved to utils)
 function clamp01(n: number) {
   if (!Number.isFinite(n)) return 0
   return Math.min(1, Math.max(0, n))
@@ -28,7 +22,6 @@ function roundTo2(n: number) {
 }
 
 function parseMoney(raw: string): number {
-  // Accepts: 1000, 1'000, 1’000.50, 1000.50, 1 000, 1'000,50
   const trimmed = raw.trim()
   if (!trimmed) return 0
 
@@ -36,7 +29,6 @@ function parseMoney(raw: string): number {
     .replaceAll('’', "'")
     .replaceAll(' ', '')
     .replaceAll("'", '')
-    // Keep only digits, - , . , ,
     .replace(/[^\d,.\-]/g, '')
 
   const hasDot = normalized.includes('.')
@@ -44,10 +36,8 @@ function parseMoney(raw: string): number {
 
   let numStr = normalized
   if (hasDot && hasComma) {
-    // Assume comma is thousands separator; keep dot as decimal.
     numStr = numStr.replaceAll(',', '')
   } else if (!hasDot && hasComma) {
-    // Assume comma is decimal separator.
     numStr = numStr.replaceAll(',', '.')
   }
 
@@ -64,7 +54,6 @@ function formatCHF(value: number, opts?: { decimals?: number }) {
     maximumFractionDigits: decimals,
   }).format(value)
 
-  // de-CH often uses a right single quote (’). Requirement asks for apostrophe (').
   return fmt.replaceAll('’', "'").replaceAll('\u00A0', ' ')
 }
 
@@ -113,7 +102,7 @@ function CardHeader(props: React.PropsWithChildren<{ className?: string }>) {
 }
 
 function CardContent(props: React.PropsWithChildren<{ className?: string }>) {
-  return <div className={cx('px-5 py-4', props.className)}>{props.children}</div>
+  return <div className={cx('px-5 py-6', props.className)}>{props.children}</div>
 }
 
 function Label(props: React.PropsWithChildren<{ htmlFor: string }>) {
@@ -124,81 +113,7 @@ function Label(props: React.PropsWithChildren<{ htmlFor: string }>) {
   )
 }
 
-function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  const { className, ...rest } = props
-  return (
-    <input
-      className={cx(
-        'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition',
-        'placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-100',
-        'disabled:bg-slate-50 disabled:text-slate-500',
-        className,
-      )}
-      {...rest}
-    />
-  )
-}
 
-function MoneyInput({ id, label, value, onChange, hint, icon }: MoneyInputProps) {
-  const [isFocused, setIsFocused] = useState(false)
-
-  const numericValue = useMemo(() => parseMoney(value), [value])
-  const displayValue = useMemo(() => {
-    if (isFocused) return value
-    if (!value) return ''
-    return formatCHF(numericValue)
-  }, [isFocused, numericValue, value])
-
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      <div className="relative">
-        {icon ? (
-          <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-            {icon}
-          </div>
-        ) : null}
-        <TextInput
-          id={id}
-          inputMode="decimal"
-          placeholder="CHF 0.00"
-          value={displayValue}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          onChange={(e) => onChange(e.target.value)}
-          className={cx(icon ? 'pl-10' : undefined)}
-        />
-      </div>
-      {hint ? <div className="text-xs leading-5 text-slate-500">{hint}</div> : null}
-    </div>
-  )
-}
-
-function ProgressBar({
-  value,
-  labelLeft,
-  labelRight,
-}: {
-  value: number
-  labelLeft: string
-  labelRight: string
-}) {
-  const pct = Math.round(clamp01(value) * 100)
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-slate-800">{labelLeft}</span>
-        <span className="text-slate-600">{labelRight}</span>
-      </div>
-      <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full rounded-full bg-slate-900 transition-[width] duration-300 ease-out"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  )
-}
 
 function Pill({
   tone,
@@ -261,8 +176,7 @@ function App() {
     [zielMonat],
   )
 
-  const totalAssetsNow = useMemo(() => barN + s3aN + pkN + otherN, [barN, s3aN, pkN, otherN])
-  // const hardAssetsNow = useMemo(() => barN + s3aN + otherN, [barN, s3aN, otherN]) // optional (not used in UI)
+
 
   // Projection to target date (linear, no return) based on user-defined monthly contributions.
   const s3aProjected = useMemo(() => s3aN + s3aMonthlyN * monthsRemaining, [monthsRemaining, s3aMonthlyN, s3aN])
@@ -288,11 +202,7 @@ function App() {
     () => Math.max(totalShortfallAtTarget, hardShortfallAtTarget),
     [hardShortfallAtTarget, totalShortfallAtTarget],
   )
-  const limitingFactor = useMemo(() => {
-    if (hardShortfallAtTarget > totalShortfallAtTarget) return 'Harte Eigenmittel (10%)'
-    if (totalShortfallAtTarget > hardShortfallAtTarget) return 'Gesamt-Eigenmittel (20%)'
-    return 'Kein Engpass'
-  }, [hardShortfallAtTarget, totalShortfallAtTarget])
+
 
   const monthlySavingsTarget = useMemo(() => {
     if (!priceValid) return NaN
@@ -306,11 +216,6 @@ function App() {
     return clamp01(totalAssetsAtTarget / totalRequired)
   }, [totalAssetsAtTarget, totalRequired])
 
-  const hardProgress = useMemo(() => {
-    if (hardRequired <= 0) return 0
-    return clamp01(hardAssetsAtTarget / hardRequired)
-  }, [hardAssetsAtTarget, hardRequired])
-
   const hardRuleMet = hardAssetsAtTarget >= hardRequired
   const totalRuleMet = totalAssetsAtTarget >= totalRequired
 
@@ -318,335 +223,236 @@ function App() {
   const invalidDate = priceValid && savingsGap > 0 && monthsRemaining <= 0
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pb-20 font-sans text-slate-900">
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 mb-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-balance text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-              Eigenmittel-Rechner (Schweiz)
+            <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+              Eigenmittel
             </h1>
             <Pill tone="info">
               <Landmark className="h-4 w-4" />
               Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel
             </Pill>
           </div>
-          <p className="max-w-3xl text-sm text-slate-600">
-            Client-side Rechner zur Planung der Eigenmittel. Keine Daten werden gespeichert oder gesendet.
+          <p className="max-w-3xl text-lg text-slate-600">
+            Planen Sie Ihr Eigenheim in der Schweiz: Interaktiv und einfach.
           </p>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-sm font-medium text-slate-900">Eingaben</div>
-                <div className="mt-0.5 text-sm text-slate-600">
-                  Beträge können auch mit <span className="font-medium">1'000.00</span> eingegeben werden.
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Left Column: Inputs */}
+          <div className="space-y-8">
+            <Card>
+              <CardHeader className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-lg font-semibold text-slate-900">Kaufobjekt</div>
+                  <div className="text-sm text-slate-500">
+                    Kaufpreis und Zeithorizont
+                  </div>
                 </div>
-              </div>
-              <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-                <CalendarClock className="h-4 w-4" />
-                Ziel: Monat/Jahr
-              </div>
-            </CardHeader>
+              </CardHeader>
 
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <MoneyInput
+              <CardContent className="space-y-8">
+                <SliderInput
                   id="kaufpreis"
                   label="Kaufpreis (CHF)"
                   value={kaufpreis}
                   onChange={setKaufpreis}
+                  min={0}
+                  max={3000000}
+                  step={10000}
                   icon={<Coins className="h-4 w-4" />}
                 />
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="zielmonat">Ziel-Kaufdatum</Label>
-                  <div className="relative">
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                      <CalendarClock className="h-4 w-4" />
-                    </div>
-                    <TextInput
-                      id="zielmonat"
-                      type="month"
-                      value={zielMonat}
-                      onChange={(e) => setZielMonat(e.target.value)}
-                      className="pl-10"
-                    />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="zielmonat">Ziel-Kaufdatum</Label>
+                    <span className="text-sm font-medium text-slate-900">{monthsRemaining} Monate</span>
                   </div>
-                  <div className="text-xs text-slate-500">
-                    Verbleibende Monate: <span className="font-medium text-slate-700">{monthsRemaining}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <MoneyInput
-                  id="barvermoegen"
-                  label="Barvermögen / Ersparnisse"
-                  value={barvermoegen}
-                  onChange={setBarvermoegen}
-                  icon={<Wallet className="h-4 w-4" />}
-                />
-                <MoneyInput
-                  id="saeule3a"
-                  label="Säule 3a"
-                  value={saeule3a}
-                  onChange={setSaeule3a}
-                  icon={<PiggyBank className="h-4 w-4" />}
-                />
-                <MoneyInput
-                  id="pensionskasse"
-                  label="Pensionskasse"
-                  value={pensionskasse}
-                  onChange={setPensionskasse}
-                  hint="2. Säule – zählt NICHT zu den harten Eigenmitteln"
-                  icon={<Landmark className="h-4 w-4" />}
-                />
-                <MoneyInput
-                  id="andere"
-                  label="Andere Vermögenswerte"
-                  value={andereVermoegen}
-                  onChange={setAndereVermoegen}
-                  hint="als liquide angenommen"
-                  icon={<Coins className="h-4 w-4" />}
-                />
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <div className="text-sm font-medium text-slate-900">Monatliche Einzahlungen (bis Ziel)</div>
-                <div className="mt-0.5 text-xs text-slate-600">
-                  Wird bis zum Zielmonat linear hochgerechnet (ohne Rendite/Verzinsung).
-                </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <MoneyInput
-                    id="saeule3aMonatlich"
-                    label="Einzahlung Säule 3a / Monat"
-                    value={saeule3aMonatlich}
-                    onChange={setSaeule3aMonatlich}
-                    icon={<PiggyBank className="h-4 w-4" />}
-                  />
-                  <MoneyInput
-                    id="pensionskasseMonatlich"
-                    label="Einzahlung Pensionskasse / Monat"
-                    value={pensionskasseMonatlich}
-                    onChange={setPensionskasseMonatlich}
-                    hint="nur für die 20%-Regel relevant"
-                    icon={<Landmark className="h-4 w-4" />}
+                  <MonthPicker
+                    value={zielMonat}
+                    onChange={setZielMonat}
                   />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <div className="text-sm font-medium text-slate-900">Monatliches Sparziel</div>
-                  <div className="mt-0.5 text-sm text-slate-600">
-                    Basis ist die grössere Lücke: <span className="font-medium text-slate-800">{limitingFactor}</span>
-                  </div>
-                </div>
-                {!priceValid ? (
-                  <Pill tone="warn">
-                    <AlertTriangle className="h-4 w-4" />
-                    Kaufpreis eingeben
-                  </Pill>
-                ) : savingsGap <= 0 ? (
-                  <Pill tone="ok">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Ziel bereits erreicht
-                  </Pill>
-                ) : invalidDate ? (
-                  <Pill tone="warn">
-                    <AlertTriangle className="h-4 w-4" />
-                    Zieldatum prüfen
-                  </Pill>
-                ) : (
-                  <Pill tone="info">
-                    <CalendarClock className="h-4 w-4" />
-                    {monthsRemaining} Monate
-                  </Pill>
-                )}
-              </CardHeader>
-
-              <CardContent className="space-y-5">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
-                  <div className="text-sm text-slate-600">Sie sollten sparen:</div>
-                  <div className="mt-1 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                    {Number.isFinite(monthlySavingsTarget)
-                      ? formatCHF(roundTo2(monthlySavingsTarget))
-                      : '—'}
-                    <span className="ml-2 text-base font-medium text-slate-600">/ Monat</span>
-                  </div>
-                  {!priceValid ? (
-                    <div className="mt-2 text-sm text-amber-900">
-                      Bitte geben Sie zuerst einen Kaufpreis grösser als CHF 0 ein.
-                    </div>
-                  ) : null}
-                  {invalidDate ? (
-                    <div className="mt-2 text-sm text-amber-900">
-                      Bitte wählen Sie ein zukünftiges Ziel-Kaufdatum (mindestens nächsten Monat).
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <div className="text-xs text-slate-500">Zu sparen (Total)</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900">
-                      {formatCHF(roundTo2(savingsGap))}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                    <div className="text-xs text-slate-500">Eigenmittel am Ziel (Prognose)</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-900">
-                      {formatCHF(roundTo2(totalAssetsAtTarget))}
-                    </div>
-                    <div className="mt-1 text-xs text-slate-500">
-                      Aktuell: <span className="font-medium text-slate-700">{formatCHF(roundTo2(totalAssetsNow))}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {showHardWarning ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
-                      <div>
-                        <div className="font-medium">
-                          Achtung: 10% harte Eigenmittel sind noch nicht gedeckt.
-                        </div>
-                        <div className="mt-1 text-amber-900/90">
-                          Sie haben genug Gesamtvermögen für 20%, aber mind. 10% des Kaufpreises müssen aus Barvermögen,
-                          Säule 3a oder anderen (liquiden) Mitteln kommen — nicht aus der Pensionskasse.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <div className="text-sm font-medium text-slate-900">Fortschritt & Aufschlüsselung</div>
-                <div className="mt-0.5 text-sm text-slate-600">
-                  Prognose zum Zieltermin (inkl. monatlicher Einzahlungen).
+                <div className="text-lg font-semibold text-slate-900">Vermögenswerte (Aktuell)</div>
+                <div className="text-sm text-slate-500">
+                  Was steht heute bereits zur Verfügung?
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Pill tone={totalRuleMet ? 'ok' : 'info'}>
-                    {totalRuleMet ? <CheckCircle2 className="h-4 w-4" /> : <Coins className="h-4 w-4" />}
-                    20% Gesamt: {totalRuleMet ? 'gedeckt' : 'offen'}
-                  </Pill>
-                  <Pill tone={hardRuleMet ? 'ok' : 'warn'}>
-                    {hardRuleMet ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                    10% hart:{' '}
-                    {hardRuleMet
-                      ? 'gedeckt'
-                      : `offen (${formatCHF(roundTo2(hardShortfallAtTarget), { decimals: 0 })})`}
-                  </Pill>
-                </div>
-                <ProgressBar
-                  value={totalProgress}
-                  labelLeft="Gesamt-Eigenmittel (20%)"
-                  labelRight={`${formatCHF(roundTo2(totalAssetsAtTarget), { decimals: 0 })} von ${formatCHF(roundTo2(totalRequired), { decimals: 0 })}`}
+              <CardContent className="space-y-8">
+                <SliderInput
+                  id="barvermoegen"
+                  label="Barvermögen / Ersparnisse"
+                  value={barvermoegen}
+                  onChange={setBarvermoegen}
+                  max={500000}
+                  step={1000}
+                  icon={<Wallet className="h-4 w-4" />}
                 />
-                <ProgressBar
-                  value={hardProgress}
-                  labelLeft="Harte Eigenmittel (10%)"
-                  labelRight={`${formatCHF(roundTo2(hardAssetsAtTarget), { decimals: 0 })} von ${formatCHF(roundTo2(hardRequired), { decimals: 0 })}`}
+                <SliderInput
+                  id="saeule3a"
+                  label="Säule 3a"
+                  value={saeule3a}
+                  onChange={setSaeule3a}
+                  max={200000}
+                  step={1000}
+                  icon={<PiggyBank className="h-4 w-4" />}
                 />
+                <SliderInput
+                  id="pensionskasse"
+                  label="Pensionskasse"
+                  value={pensionskasse}
+                  onChange={setPensionskasse}
+                  max={500000}
+                  step={1000}
+                  hint="2. Säule – zählt NICHT zu den harten Eigenmitteln"
+                  icon={<Landmark className="h-4 w-4" />}
+                />
+                <SliderInput
+                  id="andere"
+                  label="Andere Vermögenswerte"
+                  value={andereVermoegen}
+                  onChange={setAndereVermoegen}
+                  max={200000}
+                  step={1000}
+                  hint="als liquide angenommen"
+                  icon={<Coins className="h-4 w-4" />}
+                />
+              </CardContent>
+            </Card>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4">
-                    <div className="text-sm font-medium text-slate-900">20% Ziel (Total)</div>
-                    <div className="mt-3 flex flex-1 flex-col gap-2 text-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0 text-slate-600">Ziel (20%)</span>
-                        <span className="whitespace-nowrap text-right font-medium tabular-nums text-slate-900">
-                          {formatCHF(roundTo2(totalRequired))}
-                        </span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0 text-slate-600">Prognose am Ziel</span>
-                        <span className="whitespace-nowrap text-right font-medium tabular-nums text-slate-900">
-                          {formatCHF(roundTo2(totalAssetsAtTarget))}
-                        </span>
-                      </div>
-                      <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-2">
-                        <span className="text-slate-600">Fehlbetrag</span>
-                        <span className="whitespace-nowrap text-right font-semibold tabular-nums text-slate-900">
-                          {formatCHF(roundTo2(totalShortfallAtTarget))}
-                        </span>
-                      </div>
+            <Card>
+              <CardHeader>
+                <div className="text-lg font-semibold text-slate-900">Monatliche Einzahlungen</div>
+                <div className="text-sm text-slate-500">
+                  Geplante Sparraten bis zum Ziel
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-8">
+                <SliderInput
+                  id="saeule3aMonatlich"
+                  label="Einzahlung Säule 3a / Monat"
+                  value={saeule3aMonatlich}
+                  onChange={setSaeule3aMonatlich}
+                  max={3000}
+                  step={50}
+                  icon={<PiggyBank className="h-4 w-4" />}
+                />
+                <SliderInput
+                  id="pensionskasseMonatlich"
+                  label="Einzahlung Pensionskasse / Monat"
+                  value={pensionskasseMonatlich}
+                  onChange={setPensionskasseMonatlich}
+                  max={5000}
+                  step={50}
+                  hint="nur für die 20%-Regel relevant"
+                  icon={<Landmark className="h-4 w-4" />}
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Analysis */}
+          <div className="space-y-8">
+            <Card className="overflow-hidden border-slate-200">
+              <CardHeader className="bg-slate-50/50">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-lg font-semibold text-slate-900">Ziel-Erreichung</div>
+                    <div className="text-sm text-slate-500">
+                      20% Eigenmittel ({formatCHF(totalRequired)})
                     </div>
                   </div>
+                  {!priceValid ? (
+                    <Pill tone="warn">Kaufpreis eingeben</Pill>
+                  ) : savingsGap <= 0 ? (
+                    <Pill tone="ok">Ziel erreicht</Pill>
+                  ) : (
+                    <Pill tone="info">{Math.round(totalProgress * 100)}% erreicht</Pill>
+                  )}
+                </div>
+              </CardHeader>
 
-                  <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4">
-                    <div className="text-sm font-medium text-slate-900">10% harte Eigenmittel</div>
-                    <div className="mt-3 flex flex-1 flex-col gap-2 text-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0 text-slate-600">Ziel (10%)</span>
-                        <span className="whitespace-nowrap text-right font-medium tabular-nums text-slate-900">
-                          {formatCHF(roundTo2(hardRequired))}
-                        </span>
+              <CardContent className="space-y-8">
+                {/* Donut Chart Visualization */}
+                <div className="flex flex-col items-center">
+                  <DonutChart
+                    hardEquity={hardAssetsAtTarget}
+                    softEquity={pkN + pkMonthlyN * monthsRemaining}
+                    gap={savingsGap}
+                    target={totalRequired}
+                  />
+                  <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs font-medium text-slate-600">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                      <span>Hart ({formatCHF(hardAssetsAtTarget, { decimals: 0 })})</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-3 w-3 rounded-full bg-blue-500" />
+                      <span>PK ({formatCHF(pkN + pkMonthlyN * monthsRemaining, { decimals: 0 })})</span>
+                    </div>
+                    {savingsGap > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-3 w-3 rounded-full bg-slate-200" />
+                        <span>Fehlend ({formatCHF(savingsGap, { decimals: 0 })})</span>
                       </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="min-w-0 text-slate-600">Prognose am Ziel (hart)</span>
-                        <span className="whitespace-nowrap text-right font-medium tabular-nums text-slate-900">
-                          {formatCHF(roundTo2(hardAssetsAtTarget))}
-                        </span>
-                      </div>
-                      <div className="mt-auto flex items-center justify-between border-t border-slate-100 pt-2">
-                        <span className="text-slate-600">Fehlbetrag</span>
-                        <span className="whitespace-nowrap text-right font-semibold tabular-nums text-slate-900">
-                          {formatCHF(roundTo2(hardShortfallAtTarget))}
-                        </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-6 pt-6 border-t border-slate-100">
+                  {/* Summary Boxes */}
+                  <div className="rounded-2xl bg-slate-50 p-6 text-center">
+                    <div className="text-sm text-slate-500 mb-1">Empfohlene zusätzliche Sparrate</div>
+                    <div className="text-4xl font-bold tracking-tight text-slate-900">
+                      {Number.isFinite(monthlySavingsTarget) ? formatCHF(roundTo2(monthlySavingsTarget)) : '—'}
+                      <span className="text-lg font-medium text-slate-500 ml-1">/ Mt</span>
+                    </div>
+                    {!priceValid && <div className="mt-2 text-sm text-amber-600">Bitte Kaufpreis eingeben</div>}
+                    {invalidDate && <div className="mt-2 text-sm text-amber-600">Bitte Zieldatum anpassen</div>}
+                  </div>
+
+                  {showHardWarning && (
+                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 border border-amber-100">
+                      <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
+                      <div>
+                        <span className="font-semibold block mb-1">10% harte Eigenmittel nicht gedeckt</span>
+                        Sie haben zwar genug Gesamtvermögen, aber zu viel davon liegt in der Pensionskasse. Sie benötigen noch {formatCHF(hardShortfallAtTarget)} aus flüssigen Mitteln.
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Wallet className="h-4 w-4" /> Hart: Barvermögen
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <PiggyBank className="h-4 w-4" /> Hart: Säule 3a
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Coins className="h-4 w-4" /> Hart: Andere (liquid)
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <Landmark className="h-4 w-4" /> Nicht-hart: Pensionskasse
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-medium text-slate-800">Geplante Einzahlungen / Monat</span>
-                    <span>
-                      3a:{' '}
-                      <span className="font-semibold text-slate-900">{formatCHF(roundTo2(s3aMonthlyN))}</span>
-                      {' · '}PK:{' '}
-                      <span className="font-semibold text-slate-900">{formatCHF(roundTo2(pkMonthlyN))}</span>
-                    </span>
-                  </div>
+            <Card>
+              <CardHeader>
+                <div className="text-lg font-semibold text-slate-900">Vermögensentwicklung</div>
+                <div className="text-sm text-slate-500">Prognose bis zum Zielmonat unter Einhaltung der empfohlenen Sparrate</div>
+              </CardHeader>
+              <CardContent>
+                <GrowthChart
+                  currentLiquidAssets={barN + otherN}
+                  monthlyLiquidContribution={(Number.isFinite(monthlySavingsTarget) ? monthlySavingsTarget : 0)}
+                  current3aAssets={s3aN}
+                  monthly3aContribution={s3aMonthlyN}
+                  currentPKAssets={pkN}
+                  monthlyPKContribution={pkMonthlyN}
+                  months={monthsRemaining + 12}
+                  targetAmount={totalRequired}
+                />
+                <div className="text-center text-xs text-slate-400 mt-4">
+                  Grafik zeigt theoretischen Verlauf inkl. empfohlener Sparrate
                 </div>
               </CardContent>
             </Card>
           </div>
-        </div>
-
-        <div className="mt-8 text-xs text-slate-500">
-          Hinweis: Dieser Rechner bildet die Mindestanforderungen (20% Eigenmittel / 10% harte Eigenmittel) ab. Banken
-          können je nach Objekt/Profil zusätzliche Anforderungen stellen.
         </div>
       </div>
     </div>
