@@ -80,7 +80,7 @@ export function SliderInput({
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <label htmlFor={id} className="text-sm font-medium text-slate-800">
+                <label htmlFor={id} className="text-sm font-medium text-slate-800 dark:text-slate-200">
                     {label}
                 </label>
                 {/* Optional: Show value on the right or rely on input */}
@@ -89,7 +89,7 @@ export function SliderInput({
             <div className="relative">
                 <div className="relative mb-4">
                     {icon ? (
-                        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
                             {icon}
                         </div>
                     ) : null}
@@ -101,6 +101,7 @@ export function SliderInput({
                         className={cn(
                             "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition",
                             "placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-100",
+                            "dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100 dark:focus:ring-slate-800 dark:focus:border-slate-700",
                             icon ? "pl-10" : ""
                         )}
                     />

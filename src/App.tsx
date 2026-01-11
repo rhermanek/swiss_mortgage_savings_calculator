@@ -10,6 +10,8 @@ import { DonutChart } from './components/DonutChart'
 import { GrowthChart } from './components/GrowthChart'
 import { MonthPicker } from './components/MonthPicker'
 import { SliderInput } from './components/SliderInput'
+import { ThemeProvider } from './components/ThemeProvider'
+import { ThemeToggle } from './components/ThemeToggle'
 import logoUrl from './assets/logo.png'
 
 // Helper utilities (kept locally or could be imported if moved to utils)
@@ -108,7 +110,7 @@ function CardContent(props: React.PropsWithChildren<{ className?: string }>) {
 
 function Label(props: React.PropsWithChildren<{ htmlFor: string }>) {
   return (
-    <label htmlFor={props.htmlFor} className="text-sm font-medium text-slate-800">
+    <label htmlFor={props.htmlFor} className="text-sm font-medium text-slate-800 dark:text-slate-200">
       {props.children}
     </label>
   )
@@ -122,10 +124,10 @@ function Pill({
 }: React.PropsWithChildren<{ tone: 'ok' | 'warn' | 'info' }>) {
   const styles =
     tone === 'ok'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-200'
       : tone === 'warn'
-        ? 'border-amber-200 bg-amber-50 text-amber-900'
-        : 'border-slate-200 bg-slate-50 text-slate-800'
+        ? 'border-amber-200 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-200'
+        : 'border-slate-200 bg-slate-50 text-slate-800 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200'
   return (
     <span
       className={cx(
@@ -224,242 +226,247 @@ function App() {
   const invalidDate = priceValid && savingsGap > 0 && monthsRemaining <= 0
 
   return (
-    <div className="min-h-screen pb-20 font-sans text-slate-900">
-      <div className="mx-auto w-full max-w-6xl px-4 py-10">
-        <div className="flex items-center gap-6 mb-4">
-          <img src={logoUrl} alt="Logo" className="h-32 w-auto shrink-0 drop-shadow-[0_5px_5px_rgba(0,0,0,0.4)]" />
-          <div className="flex flex-col gap-2 w-full">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Eigenmittel
-              </h1>
-              <Pill tone="info">
-                <Landmark className="h-4 w-4" />
-                Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel
-              </Pill>
-            </div>
-            <p className="max-w-3xl text-lg text-slate-600">
-              Planen Sie Ihr Eigenheim in der Schweiz: Interaktiv und einfach.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Left Column: Inputs */}
-          <div className="space-y-8">
-            <Card>
-              <CardHeader className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-lg font-semibold text-slate-900">Kaufobjekt</div>
-                  <div className="text-sm text-slate-500">
-                    Kaufpreis und Zeithorizont
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-8">
-                <SliderInput
-                  id="kaufpreis"
-                  label="Kaufpreis (CHF)"
-                  value={kaufpreis}
-                  onChange={setKaufpreis}
-                  min={0}
-                  max={3000000}
-                  step={10000}
-                  icon={<Coins className="h-4 w-4" />}
-                />
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="zielmonat">Ziel-Kaufdatum</Label>
-                    <span className="text-sm font-medium text-slate-900">{monthsRemaining} Monate</span>
-                  </div>
-                  <MonthPicker
-                    value={zielMonat}
-                    onChange={setZielMonat}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="text-lg font-semibold text-slate-900">Vermögenswerte (Aktuell)</div>
-                <div className="text-sm text-slate-500">
-                  Was steht heute bereits zur Verfügung?
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <SliderInput
-                  id="barvermoegen"
-                  label="Barvermögen / Ersparnisse"
-                  value={barvermoegen}
-                  onChange={setBarvermoegen}
-                  max={500000}
-                  step={1000}
-                  icon={<Wallet className="h-4 w-4" />}
-                />
-                <SliderInput
-                  id="saeule3a"
-                  label="Säule 3a"
-                  value={saeule3a}
-                  onChange={setSaeule3a}
-                  max={200000}
-                  step={1000}
-                  icon={<PiggyBank className="h-4 w-4" />}
-                />
-                <SliderInput
-                  id="pensionskasse"
-                  label="Pensionskasse"
-                  value={pensionskasse}
-                  onChange={setPensionskasse}
-                  max={500000}
-                  step={1000}
-                  hint="2. Säule – zählt NICHT zu den harten Eigenmitteln"
-                  icon={<Landmark className="h-4 w-4" />}
-                />
-                <SliderInput
-                  id="andere"
-                  label="Andere Vermögenswerte"
-                  value={andereVermoegen}
-                  onChange={setAndereVermoegen}
-                  max={200000}
-                  step={1000}
-                  hint="als liquide angenommen"
-                  icon={<Coins className="h-4 w-4" />}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="text-lg font-semibold text-slate-900">Monatliche Einzahlungen</div>
-                <div className="text-sm text-slate-500">
-                  Geplante Sparraten bis zum Ziel
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-8">
-                <SliderInput
-                  id="saeule3aMonatlich"
-                  label="Einzahlung Säule 3a / Monat"
-                  value={saeule3aMonatlich}
-                  onChange={setSaeule3aMonatlich}
-                  max={3000}
-                  step={50}
-                  icon={<PiggyBank className="h-4 w-4" />}
-                />
-                <SliderInput
-                  id="pensionskasseMonatlich"
-                  label="Einzahlung Pensionskasse / Monat"
-                  value={pensionskasseMonatlich}
-                  onChange={setPensionskasseMonatlich}
-                  max={5000}
-                  step={50}
-                  hint="nur für die 20%-Regel relevant"
-                  icon={<Landmark className="h-4 w-4" />}
-                />
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column: Analysis */}
-          <div className="space-y-8">
-            <Card className="overflow-hidden border-slate-200">
-              <CardHeader className="bg-slate-50/50">
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <div className="min-h-screen pb-20 font-sans text-slate-900 bg-slate-50 dark:bg-slate-950 dark:text-slate-50 transition-colors duration-300">
+        <div className="mx-auto w-full max-w-6xl px-4 py-10">
+          <div className="flex items-start justify-between mb-8">
+            <div className="flex items-center gap-6">
+              <img src={logoUrl} alt="Logo" className="h-32 w-auto shrink-0 drop-shadow-[0_5px_5px_rgba(0,0,0,0.4)]" />
+              <div className="flex flex-col gap-2 w-full">
                 <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl">
+                    Eigenmittel
+                  </h1>
+                  <Pill tone="info">
+                    <Landmark className="h-4 w-4" />
+                    Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel
+                  </Pill>
+                </div>
+                <p className="max-w-3xl text-lg text-slate-600 dark:text-slate-400">
+                  Planen Sie Ihr Eigenheim in der Schweiz: Interaktiv und einfach.
+                </p>
+              </div>
+            </div>
+            <ThemeToggle />
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* Left Column: Inputs */}
+            <div className="space-y-8">
+              <Card className="dark:bg-slate-900 dark:border-slate-800">
+                <CardHeader className="flex items-center justify-between gap-4 dark:border-slate-800">
                   <div>
-                    <div className="text-lg font-semibold text-slate-900">Ziel-Erreichung</div>
-                    <div className="text-sm text-slate-500">
-                      20% Eigenmittel ({formatCHF(totalRequired)})
+                    <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Kaufobjekt</div>
+                    <div className="text-sm text-slate-500 dark:text-slate-400">
+                      Kaufpreis und Zeithorizont
                     </div>
                   </div>
-                  {!priceValid ? (
-                    <Pill tone="warn">Kaufpreis eingeben</Pill>
-                  ) : savingsGap <= 0 ? (
-                    <Pill tone="ok">Ziel erreicht</Pill>
-                  ) : (
-                    <Pill tone="info">{Math.round(totalProgress * 100)}% erreicht</Pill>
-                  )}
-                </div>
-              </CardHeader>
+                </CardHeader>
 
-              <CardContent className="space-y-8">
-                {/* Donut Chart Visualization */}
-                <div className="flex flex-col items-center">
-                  <DonutChart
-                    hardEquity={hardAssetsAtTarget}
-                    softEquity={pkN + pkMonthlyN * monthsRemaining}
-                    gap={savingsGap}
-                    target={totalRequired}
+                <CardContent className="space-y-8">
+                  <SliderInput
+                    id="kaufpreis"
+                    label="Kaufpreis (CHF)"
+                    value={kaufpreis}
+                    onChange={setKaufpreis}
+                    min={0}
+                    max={3000000}
+                    step={10000}
+                    icon={<Coins className="h-4 w-4" />}
                   />
-                  <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs font-medium text-slate-600">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                      <span>Hart ({formatCHF(hardAssetsAtTarget, { decimals: 0 })})</span>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="zielmonat">Ziel-Kaufdatum</Label>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{monthsRemaining} Monate</span>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-3 w-3 rounded-full bg-blue-500" />
-                      <span>PK ({formatCHF(pkN + pkMonthlyN * monthsRemaining, { decimals: 0 })})</span>
+                    <MonthPicker
+                      value={zielMonat}
+                      onChange={setZielMonat}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="dark:bg-slate-900 dark:border-slate-800">
+                <CardHeader className="dark:border-slate-800">
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Vermögenswerte (Aktuell)</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    Was steht heute bereits zur Verfügung?
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  <SliderInput
+                    id="barvermoegen"
+                    label="Barvermögen / Ersparnisse"
+                    value={barvermoegen}
+                    onChange={setBarvermoegen}
+                    max={500000}
+                    step={1000}
+                    icon={<Wallet className="h-4 w-4" />}
+                  />
+                  <SliderInput
+                    id="saeule3a"
+                    label="Säule 3a"
+                    value={saeule3a}
+                    onChange={setSaeule3a}
+                    max={200000}
+                    step={1000}
+                    icon={<PiggyBank className="h-4 w-4" />}
+                  />
+                  <SliderInput
+                    id="pensionskasse"
+                    label="Pensionskasse"
+                    value={pensionskasse}
+                    onChange={setPensionskasse}
+                    max={500000}
+                    step={1000}
+                    hint="2. Säule – zählt NICHT zu den harten Eigenmitteln"
+                    icon={<Landmark className="h-4 w-4" />}
+                  />
+                  <SliderInput
+                    id="andere"
+                    label="Andere Vermögenswerte"
+                    value={andereVermoegen}
+                    onChange={setAndereVermoegen}
+                    max={200000}
+                    step={1000}
+                    hint="als liquide angenommen"
+                    icon={<Coins className="h-4 w-4" />}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card className="dark:bg-slate-900 dark:border-slate-800">
+                <CardHeader className="dark:border-slate-800">
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Monatliche Einzahlungen</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
+                    Geplante Sparraten bis zum Ziel
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  <SliderInput
+                    id="saeule3aMonatlich"
+                    label="Einzahlung Säule 3a / Monat"
+                    value={saeule3aMonatlich}
+                    onChange={setSaeule3aMonatlich}
+                    max={3000}
+                    step={50}
+                    icon={<PiggyBank className="h-4 w-4" />}
+                  />
+                  <SliderInput
+                    id="pensionskasseMonatlich"
+                    label="Einzahlung Pensionskasse / Monat"
+                    value={pensionskasseMonatlich}
+                    onChange={setPensionskasseMonatlich}
+                    max={5000}
+                    step={50}
+                    hint="nur für die 20%-Regel relevant"
+                    icon={<Landmark className="h-4 w-4" />}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column: Analysis */}
+            <div className="space-y-8">
+              <Card className="overflow-hidden border-slate-200 dark:border-slate-800 dark:bg-slate-900">
+                <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ziel-Erreichung</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                        20% Eigenmittel ({formatCHF(totalRequired)})
+                      </div>
                     </div>
-                    {savingsGap > 0 && (
+                    {!priceValid ? (
+                      <Pill tone="warn">Kaufpreis eingeben</Pill>
+                    ) : savingsGap <= 0 ? (
+                      <Pill tone="ok">Ziel erreicht</Pill>
+                    ) : (
+                      <Pill tone="info">{Math.round(totalProgress * 100)}% erreicht</Pill>
+                    )}
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-8">
+                  {/* Donut Chart Visualization */}
+                  <div className="flex flex-col items-center">
+                    <DonutChart
+                      hardEquity={hardAssetsAtTarget}
+                      softEquity={pkN + pkMonthlyN * monthsRemaining}
+                      gap={savingsGap}
+                      target={totalRequired}
+                    />
+                    <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-1.5">
-                        <div className="h-3 w-3 rounded-full bg-slate-200" />
-                        <span>Fehlend ({formatCHF(savingsGap, { decimals: 0 })})</span>
+                        <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                        <span>Hart ({formatCHF(hardAssetsAtTarget, { decimals: 0 })})</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-3 w-3 rounded-full bg-blue-500" />
+                        <span>PK ({formatCHF(pkN + pkMonthlyN * monthsRemaining, { decimals: 0 })})</span>
+                      </div>
+                      {savingsGap > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <div className="h-3 w-3 rounded-full bg-slate-200 dark:bg-slate-700" />
+                          <span>Fehlend ({formatCHF(savingsGap, { decimals: 0 })})</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    {/* Summary Boxes */}
+                    <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-6 text-center">
+                      <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Empfohlene zusätzliche Sparrate</div>
+                      <div className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+                        {Number.isFinite(monthlySavingsTarget) ? formatCHF(roundTo2(monthlySavingsTarget)) : '—'}
+                        <span className="text-lg font-medium text-slate-500 dark:text-slate-400 ml-1">/ Mt</span>
+                      </div>
+                      {!priceValid && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">Bitte Kaufpreis eingeben</div>}
+                      {invalidDate && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">Bitte Zieldatum anpassen</div>}
+                    </div>
+
+                    {showHardWarning && (
+                      <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200 border border-amber-100 dark:border-amber-900/50">
+                        <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
+                        <div>
+                          <span className="font-semibold block mb-1">10% harte Eigenmittel nicht gedeckt</span>
+                          Sie haben zwar genug Gesamtvermögen, aber zu viel davon liegt in der Pensionskasse. Sie benötigen noch {formatCHF(hardShortfallAtTarget)} aus flüssigen Mitteln.
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="space-y-6 pt-6 border-t border-slate-100">
-                  {/* Summary Boxes */}
-                  <div className="rounded-2xl bg-slate-50 p-6 text-center">
-                    <div className="text-sm text-slate-500 mb-1">Empfohlene zusätzliche Sparrate</div>
-                    <div className="text-4xl font-bold tracking-tight text-slate-900">
-                      {Number.isFinite(monthlySavingsTarget) ? formatCHF(roundTo2(monthlySavingsTarget)) : '—'}
-                      <span className="text-lg font-medium text-slate-500 ml-1">/ Mt</span>
-                    </div>
-                    {!priceValid && <div className="mt-2 text-sm text-amber-600">Bitte Kaufpreis eingeben</div>}
-                    {invalidDate && <div className="mt-2 text-sm text-amber-600">Bitte Zieldatum anpassen</div>}
+              <Card className="dark:bg-slate-900 dark:border-slate-800">
+                <CardHeader className="dark:border-slate-800">
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Vermögensentwicklung</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Prognose bis zum Zielmonat unter Einhaltung der empfohlenen Sparrate</div>
+                </CardHeader>
+                <CardContent>
+                  <GrowthChart
+                    currentLiquidAssets={barN + otherN}
+                    monthlyLiquidContribution={(Number.isFinite(monthlySavingsTarget) ? monthlySavingsTarget : 0)}
+                    current3aAssets={s3aN}
+                    monthly3aContribution={s3aMonthlyN}
+                    currentPKAssets={pkN}
+                    monthlyPKContribution={pkMonthlyN}
+                    months={monthsRemaining + 12}
+                    targetAmount={totalRequired}
+                  />
+                  <div className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
+                    Grafik zeigt theoretischen Verlauf inkl. empfohlener Sparrate
                   </div>
-
-                  {showHardWarning && (
-                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 border border-amber-100">
-                      <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
-                      <div>
-                        <span className="font-semibold block mb-1">10% harte Eigenmittel nicht gedeckt</span>
-                        Sie haben zwar genug Gesamtvermögen, aber zu viel davon liegt in der Pensionskasse. Sie benötigen noch {formatCHF(hardShortfallAtTarget)} aus flüssigen Mitteln.
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="text-lg font-semibold text-slate-900">Vermögensentwicklung</div>
-                <div className="text-sm text-slate-500">Prognose bis zum Zielmonat unter Einhaltung der empfohlenen Sparrate</div>
-              </CardHeader>
-              <CardContent>
-                <GrowthChart
-                  currentLiquidAssets={barN + otherN}
-                  monthlyLiquidContribution={(Number.isFinite(monthlySavingsTarget) ? monthlySavingsTarget : 0)}
-                  current3aAssets={s3aN}
-                  monthly3aContribution={s3aMonthlyN}
-                  currentPKAssets={pkN}
-                  monthlyPKContribution={pkMonthlyN}
-                  months={monthsRemaining + 12}
-                  targetAmount={totalRequired}
-                />
-                <div className="text-center text-xs text-slate-400 mt-4">
-                  Grafik zeigt theoretischen Verlauf inkl. empfohlener Sparrate
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </ThemeProvider>
   )
 }
 

@@ -18,8 +18,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload
         return (
-            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-1 ring-slate-200">
-                <div className="mb-2 text-sm font-medium text-slate-900">{label}</div>
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-1 ring-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:ring-slate-800">
+                <div className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">{label}</div>
                 {/* Reverse payload to match stack order (Top to Bottom visually) */}
                 {[...payload].reverse().map((entry: any, index: number) => {
                     let name = 'Unbekannt'
@@ -31,17 +31,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                         <div key={index} className="flex items-center gap-3 text-sm">
                             <div className="flex items-center gap-2">
                                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                <span className="text-slate-500">{name}</span>
+                                <span className="text-slate-500 dark:text-slate-400">{name}</span>
                             </div>
-                            <span className="ml-auto font-medium text-slate-900 tabular-nums">
+                            <span className="ml-auto font-medium text-slate-900 dark:text-slate-100 tabular-nums">
                                 CHF {new Intl.NumberFormat('de-CH').format(entry.value)}
                             </span>
                         </div>
                     )
                 })}
-                <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-semibold">
-                    <span className="text-slate-900">Total</span>
-                    <span className="text-slate-900 tabular-nums">
+                <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-semibold dark:border-slate-800">
+                    <span className="text-slate-900 dark:text-slate-100">Total</span>
+                    <span className="text-slate-900 dark:text-slate-100 tabular-nums">
                         CHF {new Intl.NumberFormat('de-CH').format(data.total)}
                     </span>
                 </div>
@@ -91,6 +91,16 @@ export function GrowthChart({
 
     return (
         <div className={cn("h-64 w-full", className)}>
+            <style>{`
+                :root {
+                    --color-grid: #e2e8f0;
+                    --color-text: #64748b;
+                }
+                .dark {
+                    --color-grid: #334155;
+                    --color-text: #94a3b8;
+                }
+            `}</style>
             <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                     data={data}
@@ -115,17 +125,17 @@ export function GrowthChart({
                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
                         </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-grid)" />
                     <XAxis
                         dataKey="name"
-                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        tick={{ fontSize: 12, fill: 'var(--color-text)' }}
                         tickLine={false}
                         axisLine={false}
                         interval="preserveStartEnd"
                         minTickGap={30}
                     />
                     <YAxis
-                        tick={{ fontSize: 12, fill: '#64748b' }}
+                        tick={{ fontSize: 12, fill: 'var(--color-text)' }}
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(value) => new Intl.NumberFormat('de-CH', { notation: "compact" }).format(value)}
