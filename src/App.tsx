@@ -143,18 +143,49 @@ function Pill({
 }
 
 function App() {
-  const [kaufpreis, setKaufpreis] = useState<string>("800'000")
-  const [zielMonat, setZielMonat] = useState<string>('') // yyyy-mm
+  // helper hook for local storage persistence
+  function usePersistentState(key: string, initialValue: string) {
+    const [state, setState] = useState(() => {
+      const stored = localStorage.getItem(key)
+      return stored ?? initialValue
+    })
 
-  const [barvermoegen, setBarvermoegen] = useState<string>("40'000")
-  const [saeule3a, setSaeule3a] = useState<string>("30'000")
-  const [pensionskasse, setPensionskasse] = useState<string>("60'000")
-  const [andereVermoegen, setAndereVermoegen] = useState<string>("10'000")
+    useEffect(() => {
+      localStorage.setItem(key, state)
+    }, [key, state])
+
+    return [state, setState] as const
+  }
+
+  // State with persistence
+  const [kaufpreis, setKaufpreis] = usePersistentState('kaufpreis', "800'000")
+
+  // Custom logic for zielMonat to handle default "24 months from now" only if not stored
+  const [zielMonat, setZielMonat] = useState<string>(() => {
+    const stored = localStorage.getItem('zielMonat')
+    if (stored) return stored
+
+    // Default: 24 months in the future
+    const now = new Date()
+    const target = new Date(now.getFullYear(), now.getMonth() + 24, 1)
+    const yyyy = target.getFullYear()
+    const mm = String(target.getMonth() + 1).padStart(2, '0')
+    return `${yyyy}-${mm}`
+  })
+
+  useEffect(() => {
+    localStorage.setItem('zielMonat', zielMonat)
+  }, [zielMonat])
+
+  const [barvermoegen, setBarvermoegen] = usePersistentState('barvermoegen', "40'000")
+  const [saeule3a, setSaeule3a] = usePersistentState('saeule3a', "30'000")
+  const [pensionskasse, setPensionskasse] = usePersistentState('pensionskasse', "60'000")
+  const [andereVermoegen, setAndereVermoegen] = usePersistentState('andereVermoegen', "10'000")
 
   const [isWizardOpen, setIsWizardOpen] = useState(false)
 
-  const [saeule3aMonatlich, setSaeule3aMonatlich] = useState<string>('500')
-  const [pensionskasseMonatlich, setPensionskasseMonatlich] = useState<string>('0')
+  const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich', '500')
+  const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich', '0')
 
   const handleWizardComplete = (values: WizardValues) => {
     setKaufpreis(values.kaufpreis)
@@ -166,15 +197,6 @@ function App() {
     setSaeule3aMonatlich(values.saeule3aMonatlich)
     setPensionskasseMonatlich(values.pensionskasseMonatlich)
   }
-
-  useEffect(() => {
-    // Default: 24 months in the future (month selector expects yyyy-mm)
-    const now = new Date()
-    const target = new Date(now.getFullYear(), now.getMonth() + 24, 1)
-    const yyyy = target.getFullYear()
-    const mm = String(target.getMonth() + 1).padStart(2, '0')
-    setZielMonat(`${yyyy}-${mm}`)
-  }, [])
 
   const kaufpreisN = useMemo(() => parseMoney(kaufpreis), [kaufpreis])
   const barN = useMemo(() => parseMoney(barvermoegen), [barvermoegen])
