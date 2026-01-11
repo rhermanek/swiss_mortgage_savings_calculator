@@ -85,7 +85,7 @@ function Card(props: React.PropsWithChildren<{ className?: string }>) {
   return (
     <div
       className={cx(
-        'rounded-2xl border border-slate-200 bg-white shadow-sm',
+        'rounded-2xl border border-slate-200 bg-white shadow-lg',
         props.className,
       )}
     >
@@ -226,8 +226,8 @@ function App() {
   return (
     <div className="min-h-screen pb-20 font-sans text-slate-900">
       <div className="mx-auto w-full max-w-6xl px-4 py-10">
-        <div className="flex items-center gap-6 mb-10">
-          <img src={logoUrl} alt="Logo" className="h-32 w-auto shrink-0" />
+        <div className="flex items-center gap-6 mb-4">
+          <img src={logoUrl} alt="Logo" className="h-32 w-auto shrink-0 drop-shadow-[0_5px_5px_rgba(0,0,0,0.4)]" />
           <div className="flex flex-col gap-2 w-full">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
