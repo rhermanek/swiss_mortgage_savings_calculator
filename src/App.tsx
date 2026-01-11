@@ -133,7 +133,7 @@ function Pill({
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium',
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
         styles,
       )}
     >
@@ -266,17 +266,17 @@ function App() {
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <div className="min-h-screen pb-20 font-sans text-slate-900 bg-slate-50 dark:bg-slate-950 dark:text-slate-50 transition-colors duration-300">
         <div className="mx-auto w-full max-w-6xl px-4 py-10">
-          <div className="flex items-start justify-between mb-8">
-            <div className="flex items-center gap-6">
-              <img src={logoUrl} alt="Logo" className="h-32 w-auto shrink-0 drop-shadow-[0_5px_5px_rgba(0,0,0,0.4)]" />
+          <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between mb-8 gap-6">
+            <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left w-full">
+              <img src={logoUrl} alt="Logo" className="h-24 sm:h-32 w-auto shrink-0 drop-shadow-[0_5px_5px_rgba(0,0,0,0.4)]" />
               <div className="flex flex-col gap-2 w-full">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                   <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl">
                     Eigenmittel
                   </h1>
                   <Pill tone="info">
-                    <Landmark className="h-4 w-4" />
-                    Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel
+                    <Landmark className="h-4 w-4 shrink-0" />
+                    <span className="text-left">Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel</span>
                   </Pill>
                 </div>
                 <p className="max-w-3xl text-lg text-slate-600 dark:text-slate-400">
@@ -287,7 +287,7 @@ function App() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsWizardOpen(true)}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-105 transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-105 transition-all whitespace-nowrap"
               >
                 <Wand2 className="w-4 h-4" />
                 Assistent starten
