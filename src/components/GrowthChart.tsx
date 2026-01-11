@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { cn } from '../lib/utils'
+import { useLanguage } from '../i18n/LanguageContext'
 
 type GrowthChartProps = {
     currentLiquidAssets: number
@@ -15,6 +16,8 @@ type GrowthChartProps = {
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
+    const { t, language } = useLanguage()
+
     if (active && payload && payload.length) {
         const data = payload[0].payload
         return (
@@ -22,10 +25,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                 <div className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">{label}</div>
                 {/* Reverse payload to match stack order (Top to Bottom visually) */}
                 {[...payload].reverse().map((entry: any, index: number) => {
-                    let name = 'Unbekannt'
-                    if (entry.name === 'pk') name = 'Pensionskasse'
-                    if (entry.name === 's3a') name = 'Säule 3a'
-                    if (entry.name === 'liquid') name = 'Liquide Mittel'
+                    let name = t('charts.unknown')
+                    if (entry.name === 'pk') name = t('charts.label_pk')
+                    if (entry.name === 's3a') name = t('charts.label_3a')
+                    if (entry.name === 'liquid') name = t('charts.label_liquid')
 
                     return (
                         <div key={index} className="flex items-center gap-3 text-sm">
@@ -34,15 +37,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
                                 <span className="text-slate-500 dark:text-slate-400">{name}</span>
                             </div>
                             <span className="ml-auto font-medium text-slate-900 dark:text-slate-100 tabular-nums">
-                                CHF {new Intl.NumberFormat('de-CH').format(entry.value)}
+                                CHF {new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US').format(entry.value)}
                             </span>
                         </div>
                     )
                 })}
                 <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-semibold dark:border-slate-800">
-                    <span className="text-slate-900 dark:text-slate-100">Total</span>
+                    <span className="text-slate-900 dark:text-slate-100">{t('charts.label_total')}</span>
                     <span className="text-slate-900 dark:text-slate-100 tabular-nums">
-                        CHF {new Intl.NumberFormat('de-CH').format(data.total)}
+                        CHF {new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US').format(data.total)}
                     </span>
                 </div>
             </div>
@@ -61,6 +64,8 @@ export function GrowthChart({
     months,
     className,
 }: GrowthChartProps) {
+    const { language } = useLanguage()
+
     const data = useMemo(() => {
         if (months <= 0) return []
 
@@ -74,7 +79,7 @@ export function GrowthChart({
 
             // Label: "Jan '25"
             const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
-            const label = d.toLocaleDateString('de-CH', { month: 'short', year: '2-digit' })
+            const label = d.toLocaleDateString(language === 'de' ? 'de-CH' : 'en-US', { month: 'short', year: '2-digit' })
 
             points.push({
                 name: label,
@@ -85,7 +90,7 @@ export function GrowthChart({
             })
         }
         return points
-    }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, months])
+    }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, months, language])
 
     if (!data.length) return null
 
@@ -138,7 +143,7 @@ export function GrowthChart({
                         tick={{ fontSize: 12, fill: 'var(--color-text)' }}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(value) => new Intl.NumberFormat('de-CH', { notation: "compact" }).format(value)}
+                        tickFormatter={(value) => new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US', { notation: "compact" }).format(value)}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Area

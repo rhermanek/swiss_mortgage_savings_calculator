@@ -15,6 +15,7 @@ A modern, interactive React application designed to help future Swiss homeowners
         -   **Indigo**: Pillar 3a (Restricted).
         -   **Green**: Pension Fund (Soft Equity).
     -   **Combined Tooltips**: Hover over charts to see exact values for specific dates.
+-   **New! Multi-Language Support**: Switch instantly between German 🇩🇪 and English 🇺🇸. Fully internationalized interface, including charts and date pickers.
 -   **New! Setup Assistant (Wizard)**: A step-by-step assistant toguide beginners through the process of setting up their calculation, explaining key concepts (like Pension Fund vs. Cash) along the way.
 -   **Target Date Planning**: Integrated custom **Month Picker** to easily set your buying horizon.
 -   **Helpful Hints**: Explanations for complex topics (e.g. Pension Fund employer contributions).
@@ -27,6 +28,7 @@ A modern, interactive React application designed to help future Swiss homeowners
 -   **Components**: [Radix UI](https://www.radix-ui.com/) (Primitives), [Lucide React](https://lucide.dev/) (Icons)
 -   **Charts**: [Recharts](https://recharts.org/)
 -   **Dates**: [date-fns](https://date-fns.org/)
+-   **i18n**: Custom Context-based solution with `date-fns` integration.
 
 ## Getting Started
 
@@ -48,6 +50,7 @@ A modern, interactive React application designed to help future Swiss homeowners
 ## Project Structure
 
 -   `src/App.tsx`: Main application logic and layout.
+-   `src/i18n/`: Internationalization logic and translation files.
 -   `src/components/GrowthChart.tsx`: Custom stacked area chart visualization.
 -   `src/components/MonthPicker.tsx`: Accessible month/year selection component.
 -   `src/components/DonutChart.tsx`: Equity composition chart.

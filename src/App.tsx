@@ -15,8 +15,10 @@ import { ThemeProvider } from './components/ThemeProvider'
 import { ThemeToggle } from './components/ThemeToggle'
 import { Wizard, type WizardValues } from './components/Wizard'
 import logoUrl from './assets/logo.png'
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext'
+import { LanguageSwitcher } from './components/LanguageSwitcher'
 
-// Helper utilities (kept locally or could be imported if moved to utils)
+// Helper utilities
 function clamp01(n: number) {
   if (!Number.isFinite(n)) return 0
   return Math.min(1, Math.max(0, n))
@@ -118,8 +120,6 @@ function Label(props: React.PropsWithChildren<{ htmlFor: string }>) {
   )
 }
 
-
-
 function Pill({
   tone,
   children,
@@ -142,7 +142,9 @@ function Pill({
   )
 }
 
-function App() {
+function AppContent() {
+  const { t } = useLanguage()
+
   // helper hook for local storage persistence
   function usePersistentState(key: string, initialValue: string) {
     const [state, setState] = useState(() => {
@@ -160,7 +162,7 @@ function App() {
   // State with persistence
   const [kaufpreis, setKaufpreis] = usePersistentState('kaufpreis', "800'000")
 
-  // Custom logic for zielMonat to handle default "24 months from now" only if not stored
+  // Custom logic for zielMonat
   const [zielMonat, setZielMonat] = useState<string>(() => {
     const stored = localStorage.getItem('zielMonat')
     if (stored) return stored
@@ -216,9 +218,6 @@ function App() {
     [zielMonat],
   )
 
-
-
-  // Projection to target date (linear, no return) based on user-defined monthly contributions.
   const s3aProjected = useMemo(() => s3aN + s3aMonthlyN * monthsRemaining, [monthsRemaining, s3aMonthlyN, s3aN])
   const pkProjected = useMemo(() => pkN + pkMonthlyN * monthsRemaining, [monthsRemaining, pkMonthlyN, pkN])
 
@@ -237,12 +236,10 @@ function App() {
     [hardAssetsAtTarget, hardRequired],
   )
 
-  // Additional savings needed (beyond the planned PK/3a monthly payments) to satisfy both rules.
   const savingsGap = useMemo(
     () => Math.max(totalShortfallAtTarget, hardShortfallAtTarget),
     [hardShortfallAtTarget, totalShortfallAtTarget],
   )
-
 
   const monthlySavingsTarget = useMemo(() => {
     if (!priceValid) return NaN
@@ -272,15 +269,15 @@ function App() {
               <div className="flex flex-col gap-2 w-full">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                   <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl">
-                    Eigenmittel
+                    {t('app.title')}
                   </h1>
                   <Pill tone="info">
                     <Landmark className="h-4 w-4 shrink-0" />
-                    <span className="text-left">Regeln: 20% Eigenmittel / mind. 10% harte Eigenmittel</span>
+                    <span className="text-left">{t('app.badge_rules')}</span>
                   </Pill>
                 </div>
                 <p className="max-w-3xl text-lg text-slate-600 dark:text-slate-400">
-                  Planen Sie Ihr Eigenheim in der Schweiz: Interaktiv und einfach.
+                  {t('app.subtitle')}
                 </p>
               </div>
             </div>
@@ -290,8 +287,9 @@ function App() {
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-105 transition-all whitespace-nowrap"
               >
                 <Wand2 className="w-4 h-4" />
-                Assistent starten
+                {t('app.btn_wizard')}
               </button>
+              <LanguageSwitcher />
               <ThemeToggle />
             </div>
           </div>
@@ -318,9 +316,9 @@ function App() {
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="flex items-center justify-between gap-4 dark:border-slate-800">
                   <div>
-                    <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Kaufobjekt</div>
+                    <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_obj_title')}</div>
                     <div className="text-sm text-slate-500 dark:text-slate-400">
-                      Kaufpreis und Zeithorizont
+                      {t('app.card_obj_desc')}
                     </div>
                   </div>
                 </CardHeader>
@@ -328,7 +326,7 @@ function App() {
                 <CardContent className="space-y-8">
                   <SliderInput
                     id="kaufpreis"
-                    label="Kaufpreis (CHF)"
+                    label={t('app.label_kaufpreis')}
                     value={kaufpreis}
                     onChange={setKaufpreis}
                     min={0}
@@ -339,8 +337,8 @@ function App() {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="zielmonat">Ziel-Kaufdatum</Label>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{monthsRemaining} Monate</span>
+                      <Label htmlFor="zielmonat">{t('app.label_zielmonat')}</Label>
+                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{monthsRemaining} {t('app.months_remaining')}</span>
                     </div>
                     <MonthPicker
                       value={zielMonat}
@@ -352,15 +350,15 @@ function App() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Vermögenswerte (Aktuell)</div>
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_assets_title')}</div>
                   <div className="text-sm text-slate-500 dark:text-slate-400">
-                    Was steht heute bereits zur Verfügung?
+                    {t('app.card_assets_desc')}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
                   <SliderInput
                     id="barvermoegen"
-                    label="Barvermögen / Ersparnisse"
+                    label={t('app.label_bar')}
                     value={barvermoegen}
                     onChange={setBarvermoegen}
                     max={500000}
@@ -369,7 +367,7 @@ function App() {
                   />
                   <SliderInput
                     id="saeule3a"
-                    label="Säule 3a"
+                    label={t('app.label_3a')}
                     value={saeule3a}
                     onChange={setSaeule3a}
                     max={200000}
@@ -378,22 +376,22 @@ function App() {
                   />
                   <SliderInput
                     id="pensionskasse"
-                    label="Pensionskasse"
+                    label={t('app.label_pk')}
                     value={pensionskasse}
                     onChange={setPensionskasse}
                     max={500000}
                     step={1000}
-                    hint="2. Säule – zählt NICHT zu den harten Eigenmitteln"
+                    hint={t('app.hint_pk')}
                     icon={<Landmark className="h-4 w-4" />}
                   />
                   <SliderInput
                     id="andere"
-                    label="Andere Vermögenswerte"
+                    label={t('app.label_other')}
                     value={andereVermoegen}
                     onChange={setAndereVermoegen}
                     max={200000}
                     step={1000}
-                    hint="als liquide angenommen"
+                    hint={t('app.hint_other')}
                     icon={<Coins className="h-4 w-4" />}
                   />
                 </CardContent>
@@ -401,15 +399,15 @@ function App() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Monatliche Einzahlungen</div>
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_monthly_title')}</div>
                   <div className="text-sm text-slate-500 dark:text-slate-400">
-                    Geplante Sparraten bis zum Ziel
+                    {t('app.card_monthly_desc')}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
                   <SliderInput
                     id="saeule3aMonatlich"
-                    label="Einzahlung Säule 3a / Monat"
+                    label={t('app.label_3a_monthly')}
                     value={saeule3aMonatlich}
                     onChange={setSaeule3aMonatlich}
                     max={3000}
@@ -418,12 +416,12 @@ function App() {
                   />
                   <SliderInput
                     id="pensionskasseMonatlich"
-                    label="Einzahlung Pensionskasse / Monat"
+                    label={t('app.label_pk_monthly')}
                     value={pensionskasseMonatlich}
                     onChange={setPensionskasseMonatlich}
                     max={5000}
                     step={50}
-                    hint="nur für die 20%-Regel relevant"
+                    hint={t('app.hint_pk_monthly')}
                     icon={<Landmark className="h-4 w-4" />}
                   />
                 </CardContent>
@@ -436,17 +434,17 @@ function App() {
                 <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-800">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Ziel-Erreichung</div>
+                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_analysis_title')}</div>
                       <div className="text-sm text-slate-500 dark:text-slate-400">
-                        20% Eigenmittel ({formatCHF(totalRequired)})
+                        {t('app.label_20pct')} ({formatCHF(totalRequired)})
                       </div>
                     </div>
                     {!priceValid ? (
-                      <Pill tone="warn">Kaufpreis eingeben</Pill>
+                      <Pill tone="warn">{t('app.status_enter_price')}</Pill>
                     ) : savingsGap <= 0 ? (
-                      <Pill tone="ok">Ziel erreicht</Pill>
+                      <Pill tone="ok">{t('app.status_goal_reached')}</Pill>
                     ) : (
-                      <Pill tone="info">{Math.round(totalProgress * 100)}% erreicht</Pill>
+                      <Pill tone="info">{Math.round(totalProgress * 100)}% {t('app.status_n_reached')}</Pill>
                     )}
                   </div>
                 </CardHeader>
@@ -463,16 +461,16 @@ function App() {
                     <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-1.5">
                         <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                        <span>Hart ({formatCHF(hardAssetsAtTarget, { decimals: 0 })})</span>
+                        <span>{t('app.chart_hard')} ({formatCHF(hardAssetsAtTarget, { decimals: 0 })})</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <div className="h-3 w-3 rounded-full bg-blue-500" />
-                        <span>PK ({formatCHF(pkN + pkMonthlyN * monthsRemaining, { decimals: 0 })})</span>
+                        <span>{t('app.chart_pk')} ({formatCHF(pkN + pkMonthlyN * monthsRemaining, { decimals: 0 })})</span>
                       </div>
                       {savingsGap > 0 && (
                         <div className="flex items-center gap-1.5">
                           <div className="h-3 w-3 rounded-full bg-slate-200 dark:bg-slate-700" />
-                          <span>Fehlend ({formatCHF(savingsGap, { decimals: 0 })})</span>
+                          <span>{t('app.chart_gap')} ({formatCHF(savingsGap, { decimals: 0 })})</span>
                         </div>
                       )}
                     </div>
@@ -481,21 +479,21 @@ function App() {
                   <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                     {/* Summary Boxes */}
                     <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-6 text-center">
-                      <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">Empfohlene zusätzliche Sparrate</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">{t('app.summary_rec_savings')}</div>
                       <div className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
                         {Number.isFinite(monthlySavingsTarget) ? formatCHF(roundTo2(monthlySavingsTarget)) : '—'}
-                        <span className="text-lg font-medium text-slate-500 dark:text-slate-400 ml-1">/ Mt</span>
+                        <span className="text-lg font-medium text-slate-500 dark:text-slate-400 ml-1">{t('app.summary_per_month')}</span>
                       </div>
-                      {!priceValid && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">Bitte Kaufpreis eingeben</div>}
-                      {invalidDate && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">Bitte Zieldatum anpassen</div>}
+                      {!priceValid && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">{t('app.summary_error_price')}</div>}
+                      {invalidDate && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">{t('app.summary_error_date')}</div>}
                     </div>
 
                     {showHardWarning && (
                       <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200 border border-amber-100 dark:border-amber-900/50">
                         <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
                         <div>
-                          <span className="font-semibold block mb-1">10% harte Eigenmittel nicht gedeckt</span>
-                          Sie haben zwar genug Gesamtvermögen, aber zu viel davon liegt in der Pensionskasse. Sie benötigen noch {formatCHF(hardShortfallAtTarget)} aus flüssigen Mitteln.
+                          <span className="font-semibold block mb-1">{t('app.warning_hard_title')}</span>
+                          {t('app.warning_hard_desc', { amount: formatCHF(hardShortfallAtTarget) })}
                         </div>
                       </div>
                     )}
@@ -505,8 +503,8 @@ function App() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">Vermögensentwicklung</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Prognose bis zum Zielmonat unter Einhaltung der empfohlenen Sparrate</div>
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_growth_title')}</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">{t('app.card_growth_desc')}</div>
                 </CardHeader>
                 <CardContent>
                   <GrowthChart
@@ -520,7 +518,7 @@ function App() {
                     targetAmount={totalRequired}
                   />
                   <div className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
-                    Grafik zeigt theoretischen Verlauf inkl. empfohlener Sparrate
+                    {t('app.growth_note')}
                   </div>
                 </CardContent>
               </Card>
@@ -532,4 +530,10 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
+  )
+}

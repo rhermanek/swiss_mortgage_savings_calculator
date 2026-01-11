@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { format, addMonths, subMonths, setMonth, setYear, getYear, getMonth } from 'date-fns'
-import { de } from 'date-fns/locale'
+import { de, enUS } from 'date-fns/locale'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { useLanguage } from '../i18n/LanguageContext'
 
 type MonthPickerProps = {
     value: string // yyyy-mm
@@ -12,9 +13,12 @@ type MonthPickerProps = {
     className?: string
 }
 
-
 export function MonthPicker({ value, onChange, label, className }: MonthPickerProps) {
+    const { language, t } = useLanguage()
     const [open, setOpen] = React.useState(false)
+
+    // Determine locale based on current language
+    const currentLocale = language === 'en' ? enUS : de
 
     // Parse current value or fallback to today
     const dateValue = React.useMemo(() => {
@@ -68,7 +72,7 @@ export function MonthPicker({ value, onChange, label, className }: MonthPickerPr
                         <span className="flex items-center gap-2">
                             <CalendarClock className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                             <span>
-                                {value ? format(dateValue, 'MMMM yyyy', { locale: de }) : <span className="text-slate-400 dark:text-slate-500">Datum wählen</span>}
+                                {value ? format(dateValue, 'MMMM yyyy', { locale: currentLocale }) : <span className="text-slate-400 dark:text-slate-500">{t('app.picker_placeholder')}</span>}
                             </span>
                         </span>
                     </button>
@@ -98,7 +102,7 @@ export function MonthPicker({ value, onChange, label, className }: MonthPickerPr
                         <div className="grid grid-cols-3 gap-2">
                             {months.map(m => {
                                 const isSelected = getYear(dateValue) === currentYear && getMonth(dateValue) === m
-                                const monthName = format(new Date(2000, m, 1), 'MMM', { locale: de })
+                                const monthName = format(new Date(2000, m, 1), 'MMM', { locale: currentLocale })
                                 return (
                                     <button
                                         key={m}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { ChevronRight, Check, X } from "lucide-react"
 import { SliderInput } from "./SliderInput"
 import { MonthPicker } from "./MonthPicker"
+import { useLanguage } from "../i18n/LanguageContext"
 
 export type WizardValues = {
     kaufpreis: string
@@ -22,6 +23,7 @@ type WizardProps = {
 }
 
 export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardProps) {
+    const { t } = useLanguage()
     const [step, setStep] = useState(0)
     const [values, setValues] = useState<WizardValues>(initialValues)
 
@@ -49,35 +51,35 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
 
     const steps = [
         {
-            title: "Willkommen",
-            description: "Lassen Sie uns gemeinsam Ihre Eigenmittel berechnen. Dieser Assistent führt Sie Schritt für Schritt durch die wichtigsten Angaben.",
+            title: t('wizard.step_1_title'),
+            description: t('wizard.step_1_desc'),
             content: (
                 <div className="space-y-4 text-slate-600 dark:text-slate-400">
                     <p>
-                        Wir werden gemeinsam folgende Punkte durchgehen:
+                        {t('wizard.step_1_text')}
                     </p>
                     <ul className="list-disc pl-5 space-y-2">
-                        <li>Ihr Wunsch-Kaufobjekt und den Zeitrahmen</li>
-                        <li>Ihr aktuelles Vermögen (Eigenkapital)</li>
-                        <li>Ihre monatlichen Sparmöglichkeiten</li>
+                        <li>{t('wizard.step_1_li_1')}</li>
+                        <li>{t('wizard.step_1_li_2')}</li>
+                        <li>{t('wizard.step_1_li_3')}</li>
                     </ul>
                     <p>
-                        Am Ende erhalten Sie eine detaillierte Auswertung und einen Sparplan.
+                        {t('wizard.step_1_end')}
                     </p>
                 </div>
             ),
         },
         {
-            title: "Das Ziel",
-            description: "Wie teuer darf das Traumhaus sein und wann möchten Sie es kaufen?",
+            title: t('wizard.step_2_title'),
+            description: t('wizard.step_2_desc'),
             content: (
                 <div className="space-y-8">
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl text-sm text-blue-800 dark:text-blue-200">
-                        Der Kaufpreis bestimmt, wie viel Eigenmittel (mind. 20%) Sie benötigen. Das Datum bestimmt, wie viel Zeit Ihnen zum Sparen bleibt.
+                        {t('wizard.step_2_info')}
                     </div>
                     <SliderInput
                         id="wiz-kaufpreis"
-                        label="Geschätzter Kaufpreis (CHF)"
+                        label={t('wizard.label_kaufpreis')}
                         value={values.kaufpreis}
                         onChange={(v) => updateValue("kaufpreis", v)}
                         max={3000000}
@@ -85,7 +87,7 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     />
                     <div className="space-y-3">
                         <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                            Geplantes Kaufdatum
+                            {t('wizard.label_datum')}
                         </label>
                         <MonthPicker
                             value={values.zielMonat}
@@ -96,16 +98,16 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
             ),
         },
         {
-            title: "Vorhandenes Vermögen",
-            description: "Was bringen Sie bereits mit?",
+            title: t('wizard.step_3_title'),
+            description: t('wizard.step_3_desc'),
             content: (
                 <div className="space-y-8">
                     <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl text-sm text-amber-800 dark:text-amber-200">
-                        Wichtig: Mindestens 10% des Kaufpreises müssen "harte" Eigenmittel sein (Sparguthaben, 3a, etc.). Pensionskassen-Guthaben gilt als "weich".
+                        {t('wizard.step_3_info')}
                     </div>
                     <SliderInput
                         id="wiz-bar"
-                        label="Barvermögen / Sparkonto"
+                        label={t('wizard.label_bar')}
                         value={values.barvermoegen}
                         onChange={(v) => updateValue("barvermoegen", v)}
                         max={500000}
@@ -113,7 +115,7 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     />
                     <SliderInput
                         id="wiz-3a"
-                        label="Guthaben Säule 3a"
+                        label={t('wizard.label_3a')}
                         value={values.saeule3a}
                         onChange={(v) => updateValue("saeule3a", v)}
                         max={200000}
@@ -121,7 +123,7 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     />
                     <SliderInput
                         id="wiz-pk"
-                        label="Pensionskasse (Vorbezug oder Verpfändung)"
+                        label={t('wizard.label_pk')}
                         value={values.pensionskasse}
                         onChange={(v) => updateValue("pensionskasse", v)}
                         max={500000}
@@ -131,16 +133,16 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
             )
         },
         {
-            title: "Monatliches Sparen",
-            description: "Wie viel können Sie bis zum Kaufdatum monatlich zur Seite legen?",
+            title: t('wizard.step_4_title'),
+            description: t('wizard.step_4_desc'),
             content: (
                 <div className="space-y-8">
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl text-sm text-emerald-800 dark:text-emerald-200">
-                        Regelmäßige Einzahlungen in die Säule 3a nebst anderen Sparmassnahmen helfen, das Ziel schneller zu erreichen.
+                        {t('wizard.step_4_info')}
                     </div>
                     <SliderInput
                         id="wiz-3a-mt"
-                        label="Monatlich in Säule 3a"
+                        label={t('wizard.label_3a_monthly')}
                         value={values.saeule3aMonatlich}
                         onChange={(v) => updateValue("saeule3aMonatlich", v)}
                         max={3000}
@@ -148,12 +150,12 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     />
                     <SliderInput
                         id="wiz-pk-mt"
-                        label="Monatlich in Pensionskasse"
+                        label={t('wizard.label_pk_monthly')}
                         value={values.pensionskasseMonatlich}
                         onChange={(v) => updateValue("pensionskasseMonatlich", v)}
                         max={5000}
                         step={50}
-                        hint="Dieser Betrag umfasst Ihren Lohnabzug für die Pensionskasse plus den Arbeitgeberbeitrag."
+                        hint={t('wizard.hint_pk_monthly')}
                     />
                 </div>
             )
@@ -170,7 +172,7 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            Schritt {step + 1} von {steps.length}
+                            {t('wizard.step_progress', { current: step + 1, total: steps.length })}
                         </div>
                     </div>
                     <button
@@ -199,7 +201,7 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                         disabled={step === 0}
                         className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                        Zurück
+                        {t('wizard.btn_back')}
                     </button>
 
                     <div className="flex gap-2">
@@ -209,14 +211,14 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                                 className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium shadow-lg shadow-emerald-600/20 transition-all active:scale-95"
                             >
                                 <Check className="w-4 h-4" />
-                                Übernehmen
+                                {t('wizard.btn_apply')}
                             </button>
                         ) : (
                             <button
                                 onClick={handleNext}
                                 className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95"
                             >
-                                Weiter
+                                {t('wizard.btn_next')}
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                         )}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { cn } from '../lib/utils'
+import { useLanguage } from '../i18n/LanguageContext'
 
 type DonutChartProps = {
     hardEquity: number
@@ -11,7 +12,7 @@ type DonutChartProps = {
 }
 
 export function DonutChart({ hardEquity, softEquity, gap, target, className }: DonutChartProps) {
-    // Using CSS variables for colors injected via style tag below.
+    const { t, language } = useLanguage()
 
     const data = useMemo(() => {
         const effectiveHard = Math.min(hardEquity, target)
@@ -19,11 +20,11 @@ export function DonutChart({ hardEquity, softEquity, gap, target, className }: D
         const effectiveGap = Math.max(0, target - effectiveHard - effectiveSoft)
 
         return [
-            { name: 'Harte Eigenmittel', value: effectiveHard, color: '#10b981' }, // emerald-500
-            { name: 'Pensionskasse', value: effectiveSoft, color: '#3b82f6' }, // blue-500
-            { name: 'Fehlbetrag', value: effectiveGap, color: 'var(--color-gap)' }, // Use CSS variable!
+            { name: t('charts.label_hard'), value: effectiveHard, color: '#10b981' }, // emerald-500
+            { name: t('charts.label_pk'), value: effectiveSoft, color: '#3b82f6' }, // blue-500
+            { name: t('charts.label_gap'), value: effectiveGap, color: 'var(--color-gap)' }, // Use CSS variable!
         ]
-    }, [hardEquity, softEquity, gap, target])
+    }, [hardEquity, softEquity, gap, target, t])
 
     // Center text calculation
     const totalAssets = hardEquity + softEquity
@@ -50,7 +51,7 @@ export function DonutChart({ hardEquity, softEquity, gap, target, className }: D
                         ))}
                     </Pie>
                     <Tooltip
-                        formatter={(value: any) => `CHF ${new Intl.NumberFormat('de-CH').format(value)}`}
+                        formatter={(value: any) => `CHF ${new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US').format(value)}`}
                         contentStyle={{
                             borderRadius: '12px',
                             border: 'none',
@@ -67,7 +68,7 @@ export function DonutChart({ hardEquity, softEquity, gap, target, className }: D
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                 <span className="text-3xl font-bold text-slate-800 dark:text-slate-100">{percentage}%</span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400 text-center px-4">
-                    des Ziels erreicht
+                    {t('charts.donut_center_label')}
                 </span>
             </div>
 
