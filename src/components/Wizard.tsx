@@ -13,6 +13,7 @@ export type WizardValues = {
     andereVermoegen: string
     saeule3aMonatlich: string
     pensionskasseMonatlich: string
+    sonstigeSparrateMonatlich: string
 }
 
 type WizardProps = {
@@ -156,6 +157,15 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                         max={5000}
                         step={50}
                         hint={t('wizard.hint_pk_monthly')}
+                    />
+                    <SliderInput
+                        id="wiz-other-mt"
+                        label={t('wizard.label_other_monthly')}
+                        value={values.sonstigeSparrateMonatlich}
+                        onChange={(v) => updateValue("sonstigeSparrateMonatlich", v)}
+                        max={20000}
+                        step={50}
+                        hint={t('wizard.hint_other_monthly')}
                     />
                 </div>
             )

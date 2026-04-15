@@ -188,6 +188,7 @@ function AppContent() {
 
   const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich', '500')
   const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich', '0')
+  const [sonstigeSparrateMonatlich, setSonstigeSparrateMonatlich] = usePersistentState('sonstigeSparrateMonatlich', '0')
 
   const handleWizardComplete = (values: WizardValues) => {
     setKaufpreis(values.kaufpreis)
@@ -198,6 +199,7 @@ function AppContent() {
     setAndereVermoegen(values.andereVermoegen)
     setSaeule3aMonatlich(values.saeule3aMonatlich)
     setPensionskasseMonatlich(values.pensionskasseMonatlich)
+    setSonstigeSparrateMonatlich(values.sonstigeSparrateMonatlich)
   }
 
   const kaufpreisN = useMemo(() => parseMoney(kaufpreis), [kaufpreis])
@@ -207,6 +209,7 @@ function AppContent() {
   const otherN = useMemo(() => parseMoney(andereVermoegen), [andereVermoegen])
   const s3aMonthlyN = useMemo(() => parseMoney(saeule3aMonatlich), [saeule3aMonatlich])
   const pkMonthlyN = useMemo(() => parseMoney(pensionskasseMonatlich), [pensionskasseMonatlich])
+  const otherMonthlySavingsN = useMemo(() => parseMoney(sonstigeSparrateMonatlich), [sonstigeSparrateMonatlich])
 
   const totalRequired = useMemo(() => kaufpreisN * 0.2, [kaufpreisN])
   const hardRequired = useMemo(() => kaufpreisN * 0.1, [kaufpreisN])
@@ -220,12 +223,19 @@ function AppContent() {
 
   const s3aProjected = useMemo(() => s3aN + s3aMonthlyN * monthsRemaining, [monthsRemaining, s3aMonthlyN, s3aN])
   const pkProjected = useMemo(() => pkN + pkMonthlyN * monthsRemaining, [monthsRemaining, pkMonthlyN, pkN])
+  const otherProjected = useMemo(
+    () => otherN + otherMonthlySavingsN * monthsRemaining,
+    [monthsRemaining, otherMonthlySavingsN, otherN],
+  )
 
   const totalAssetsAtTarget = useMemo(
-    () => barN + otherN + s3aProjected + pkProjected,
-    [barN, otherN, pkProjected, s3aProjected],
+    () => barN + otherProjected + s3aProjected + pkProjected,
+    [barN, otherProjected, pkProjected, s3aProjected],
   )
-  const hardAssetsAtTarget = useMemo(() => barN + otherN + s3aProjected, [barN, otherN, s3aProjected])
+  const hardAssetsAtTarget = useMemo(
+    () => barN + otherProjected + s3aProjected,
+    [barN, otherProjected, s3aProjected],
+  )
 
   const totalShortfallAtTarget = useMemo(
     () => Math.max(0, totalRequired - totalAssetsAtTarget),
@@ -306,7 +316,8 @@ function AppContent() {
               pensionskasse,
               andereVermoegen,
               saeule3aMonatlich,
-              pensionskasseMonatlich
+              pensionskasseMonatlich,
+              sonstigeSparrateMonatlich,
             }}
           />
 
@@ -424,6 +435,16 @@ function AppContent() {
                     hint={t('app.hint_pk_monthly')}
                     icon={<Landmark className="h-4 w-4" />}
                   />
+                  <SliderInput
+                    id="sonstigeSparrateMonatlich"
+                    label={t('app.label_other_monthly')}
+                    value={sonstigeSparrateMonatlich}
+                    onChange={setSonstigeSparrateMonatlich}
+                    max={20000}
+                    step={50}
+                    hint={t('app.hint_other_monthly')}
+                    icon={<Wallet className="h-4 w-4" />}
+                  />
                 </CardContent>
               </Card>
             </div>
@@ -509,7 +530,10 @@ function AppContent() {
                 <CardContent>
                   <GrowthChart
                     currentLiquidAssets={barN + otherN}
-                    monthlyLiquidContribution={(Number.isFinite(monthlySavingsTarget) ? monthlySavingsTarget : 0)}
+                    monthlyLiquidContribution={
+                      otherMonthlySavingsN +
+                      (Number.isFinite(monthlySavingsTarget) ? monthlySavingsTarget : 0)
+                    }
                     current3aAssets={s3aN}
                     monthly3aContribution={s3aMonthlyN}
                     currentPKAssets={pkN}

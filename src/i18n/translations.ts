@@ -26,6 +26,8 @@ export const translations = {
             label_3a_monthly: 'Einzahlung Säule 3a / Monat',
             label_pk_monthly: 'Einzahlung Pensionskasse / Monat',
             hint_pk_monthly: 'nur für die 20%-Regel relevant',
+            label_other_monthly: 'Freie Sparrate / Monat',
+            hint_other_monthly: 'zusätzliche monatliche Ersparnisse ausserhalb von 3a und Pensionskasse',
 
             card_analysis_title: 'Ziel-Erreichung',
             label_20pct: '20% Eigenmittel',
@@ -84,10 +86,12 @@ export const translations = {
 
             step_4_title: 'Monatliches Sparen',
             step_4_desc: 'Wie viel können Sie bis zum Kaufdatum monatlich zur Seite legen?',
-            step_4_info: 'Regular payments into Pillar 3a along with other savings measures help reach the goal faster.',
+            step_4_info: 'Regelmässige Einzahlungen in die Säule 3a, in die Pensionskasse und freie Sparraten helfen, das Ziel schneller zu erreichen.',
             label_3a_monthly: 'Monatlich in Säule 3a',
             label_pk_monthly: 'Monatlich in Pensionskasse',
             hint_pk_monthly: 'Dieser Betrag umfasst Ihren Lohnabzug für die Pensionskasse plus den Arbeitgeberbeitrag.',
+            label_other_monthly: 'Freie Sparrate pro Monat',
+            hint_other_monthly: 'Zusätzliche Ersparnisse, die nicht in 3a oder Pensionskasse fliessen.',
 
             step_progress: 'Schritt {current} von {total}',
             btn_back: 'Zurück',
@@ -122,6 +126,8 @@ export const translations = {
             label_3a_monthly: 'Contribution Pillar 3a / Month',
             label_pk_monthly: 'Contribution Pension Fund / Month',
             hint_pk_monthly: 'only relevant for the 20% rule',
+            label_other_monthly: 'General savings / Month',
+            hint_other_monthly: 'additional monthly savings outside Pillar 3a and the pension fund',
 
             card_analysis_title: 'Goal Achievement',
             label_20pct: '20% Equity',
@@ -180,10 +186,12 @@ export const translations = {
 
             step_4_title: 'Monthly Savings',
             step_4_desc: 'How much can you save monthly until the purchase date?',
-            step_4_info: 'Regular payments into Pillar 3a along with other savings measures help reach the goal faster.',
+            step_4_info: 'Regular payments into Pillar 3a, the pension fund, and general savings help reach the goal faster.',
             label_3a_monthly: 'Monthly into Pillar 3a',
             label_pk_monthly: 'Monthly into Pension Fund',
             hint_pk_monthly: 'This amount includes your salary deduction for the pension fund plus the employer contribution.',
+            label_other_monthly: 'General savings per month',
+            hint_other_monthly: 'Additional savings that do not go into Pillar 3a or the pension fund.',
 
             step_progress: 'Step {current} of {total}',
             btn_back: 'Back',
