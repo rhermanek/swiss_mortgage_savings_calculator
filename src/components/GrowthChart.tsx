@@ -163,7 +163,7 @@ export function GrowthChart({
         if (active && payload && payload.length) {
             const d = payload[0].payload
             return (
-                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-1 ring-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:ring-slate-800">
+                <div className="max-w-[280px] w-max rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-1 ring-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:ring-slate-800">
                     <div className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">{label}</div>
                     {[...payload]
                         .reverse()

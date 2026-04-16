@@ -11,7 +11,7 @@ type DonutChartProps = {
     className?: string
 }
 
-export function DonutChart({ hardEquity, softEquity, gap, target, className }: DonutChartProps) {
+export function DonutChart({ hardEquity, softEquity, target, className }: DonutChartProps) {
     const { t, language } = useLanguage()
 
     const data = useMemo(() => {
@@ -24,11 +24,21 @@ export function DonutChart({ hardEquity, softEquity, gap, target, className }: D
             { name: t('charts.label_pk'), value: effectiveSoft, color: '#3b82f6' }, // blue-500
             { name: t('charts.label_gap'), value: effectiveGap, color: 'var(--color-gap)' }, // Use CSS variable!
         ]
-    }, [hardEquity, softEquity, gap, target, t])
+    }, [hardEquity, softEquity, target, t])
 
     // Center text calculation
     const totalAssets = hardEquity + softEquity
     const percentage = Math.min(100, Math.round((totalAssets / target) * 100))
+
+    if (target <= 0) {
+        return (
+            <div className={cn("h-64 w-full flex items-center justify-center", className)}>
+                <p className="text-sm text-slate-400 dark:text-slate-500 text-center px-4">
+                    {t('charts.donut_empty')}
+                </p>
+            </div>
+        )
+    }
 
     return (
         <div className={cn("relative h-64 w-full", className)}>

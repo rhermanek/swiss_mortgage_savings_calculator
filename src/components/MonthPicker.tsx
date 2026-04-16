@@ -10,10 +10,11 @@ type MonthPickerProps = {
     value: string // yyyy-mm
     onChange: (value: string) => void
     label?: string
+    hasError?: boolean
     className?: string
 }
 
-export function MonthPicker({ value, onChange, label, className }: MonthPickerProps) {
+export function MonthPicker({ value, onChange, label, hasError, className }: MonthPickerProps) {
     const { language, t } = useLanguage()
     const [open, setOpen] = React.useState(false)
 
@@ -63,10 +64,13 @@ export function MonthPicker({ value, onChange, label, className }: MonthPickerPr
                 <PopoverPrimitive.Trigger asChild>
                     <button
                         className={cn(
-                            "flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition",
-                            "hover:bg-slate-50 focus:border-slate-300 focus:ring-4 focus:ring-slate-100",
+                            "flex h-11 w-full items-center justify-between rounded-xl border bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition",
+                            "hover:bg-slate-50 focus:ring-4",
                             "disabled:bg-slate-50 disabled:text-slate-500",
-                            "dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100 dark:hover:bg-slate-900 dark:focus:ring-slate-800"
+                            hasError
+                                ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950/40"
+                                : "border-slate-200 focus:border-slate-300 focus:ring-slate-100 dark:border-slate-800 dark:focus:ring-slate-800",
+                            "dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
                         )}
                     >
                         <span className="flex items-center gap-2">

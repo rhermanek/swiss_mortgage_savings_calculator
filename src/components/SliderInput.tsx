@@ -58,6 +58,13 @@ export function SliderInput({
 }: SliderInputProps) {
     const numericValue = React.useMemo(() => parseMoney(value), [value])
 
+    const isInvalid = React.useMemo(() => {
+        const trimmed = value.trim()
+        if (!trimmed) return false
+        const normalized = trimmed.replaceAll('\u2019', '').replaceAll("'", '').replace(/\s/g, '')
+        return !/^[0-9]+([.,][0-9]*)?$/.test(normalized)
+    }, [value])
+
     // Handlers
     const handleSliderChange = (vals: number[]) => {
         // When slider moves, we update the string value.
@@ -99,9 +106,12 @@ export function SliderInput({
                         value={value}
                         onChange={handleInputChange}
                         className={cn(
-                            "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition",
-                            "placeholder:text-slate-400 focus:border-slate-300 focus:ring-4 focus:ring-slate-100",
-                            "dark:bg-slate-950 dark:border-slate-800 dark:text-slate-100 dark:focus:ring-slate-800 dark:focus:border-slate-700",
+                            "h-11 w-full rounded-xl border bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition",
+                            "placeholder:text-slate-400 focus:ring-4",
+                            isInvalid
+                                ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950/40"
+                                : "border-slate-200 focus:border-slate-300 focus:ring-slate-100 dark:border-slate-800 dark:focus:ring-slate-800 dark:focus:border-slate-700",
+                            "dark:bg-slate-950 dark:text-slate-100",
                             icon ? "pl-10" : ""
                         )}
                     />
@@ -124,6 +134,7 @@ export function SliderInput({
                     </SliderPrimitive.Root>
                 </div>
             </div>
+            {isInvalid && <div className="text-xs text-rose-500 dark:text-rose-400 mt-1.5">Ungültiger Wert / Invalid value</div>}
             {hint ? <div className="text-xs text-slate-500 mt-1.5">{hint}</div> : null}
         </div>
     )

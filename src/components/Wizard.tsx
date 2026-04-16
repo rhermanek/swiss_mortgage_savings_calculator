@@ -128,10 +128,9 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                         {t('wizard.step_3_info')}
                     </div>
                     <PartnerToggle />
-                    {/* Person 1 */}
                     {values.person2Active && (
                         <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                            Person 1
+                            {t('wizard.person1_label')}
                         </div>
                     )}
                     <SliderInput
@@ -158,7 +157,6 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                         max={500000}
                         step={1000}
                     />
-                    {/* Person 2 */}
                     {values.person2Active && (
                         <>
                             <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
@@ -203,10 +201,9 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl text-sm text-emerald-800 dark:text-emerald-200">
                         {t('wizard.step_4_info')}
                     </div>
-                    {/* Person 1 */}
                     {values.person2Active && (
                         <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                            Person 1
+                            {t('wizard.person1_label')}
                         </div>
                     )}
                     <SliderInput
@@ -280,8 +277,14 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
     const isLastStep = step === steps.length - 1
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <div className="text-sm font-medium text-slate-500 dark:text-slate-400">

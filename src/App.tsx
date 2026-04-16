@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Coins,
+  Info,
   Landmark,
   PiggyBank,
   UserMinus,
@@ -9,6 +10,7 @@ import {
   Wallet,
   Wand2,
 } from 'lucide-react'
+import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { DonutChart } from './components/DonutChart'
 import { GrowthChart } from './components/GrowthChart'
 import { MonthPicker } from './components/MonthPicker'
@@ -187,6 +189,7 @@ function AppContent() {
   const [andereVermoegen, setAndereVermoegen] = usePersistentState('andereVermoegen', "10'000")
 
   const [isWizardOpen, setIsWizardOpen] = useState(false)
+  const [confirmRemovePartner, setConfirmRemovePartner] = useState(false)
 
   const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich', '500')
   const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich', '0')
@@ -328,10 +331,47 @@ function AppContent() {
                   <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl">
                     {t('app.title')}
                   </h1>
-                  <Pill tone="info">
-                    <Landmark className="h-4 w-4 shrink-0" />
-                    <span className="text-left">{t('app.badge_rules')}</span>
-                  </Pill>
+                  <div className="flex items-center gap-1">
+                    <Pill tone="info">
+                      <Landmark className="h-4 w-4 shrink-0" />
+                      <span className="text-left">{t('app.badge_rules')}</span>
+                    </Pill>
+                    <PopoverPrimitive.Root>
+                      <PopoverPrimitive.Trigger asChild>
+                        <button
+                          aria-label={t('app.info_rules_title')}
+                          className="rounded-full p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <Info className="h-3.5 w-3.5" />
+                        </button>
+                      </PopoverPrimitive.Trigger>
+                      <PopoverPrimitive.Portal>
+                        <PopoverPrimitive.Content
+                          side="bottom"
+                          align="start"
+                          sideOffset={6}
+                          className="z-50 max-w-xs rounded-xl border border-slate-200 bg-white p-4 shadow-xl outline-none dark:bg-slate-900 dark:border-slate-800"
+                        >
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 text-sm">{t('app.info_rules_title')}</h3>
+                          <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
+                            <div>
+                              <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_20pct')}</div>
+                              <div>{t('app.info_rules_20pct_desc')}</div>
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_10pct')}</div>
+                              <div>{t('app.info_rules_10pct_desc')}</div>
+                            </div>
+                            <div>
+                              <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_soft')}</div>
+                              <div>{t('app.info_rules_soft_desc')}</div>
+                            </div>
+                          </div>
+                          <PopoverPrimitive.Arrow className="fill-white dark:fill-slate-900" />
+                        </PopoverPrimitive.Content>
+                      </PopoverPrimitive.Portal>
+                    </PopoverPrimitive.Root>
+                  </div>
                 </div>
                 <p className="max-w-3xl text-lg text-slate-600 dark:text-slate-400">
                   {t('app.subtitle')}
@@ -409,6 +449,7 @@ function AppContent() {
                     <MonthPicker
                       value={zielMonat}
                       onChange={setZielMonat}
+                      hasError={invalidDate}
                     />
                   </div>
                 </CardContent>
@@ -484,13 +525,31 @@ function AppContent() {
                         <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-1">
                           {t('app.person2_section')}
                         </div>
-                        <button
-                          onClick={() => setPerson2Active(false)}
-                          className="flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                        >
-                          <UserMinus className="h-3.5 w-3.5" />
-                          {t('app.remove_partner_btn')}
-                        </button>
+                        {confirmRemovePartner ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">{t('app.confirm_remove_partner')}</span>
+                            <button
+                              onClick={() => { setPerson2Active(false); setConfirmRemovePartner(false) }}
+                              className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/60 transition-colors"
+                            >
+                              {t('app.confirm_yes')}
+                            </button>
+                            <button
+                              onClick={() => setConfirmRemovePartner(false)}
+                              className="rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              {t('app.confirm_cancel')}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmRemovePartner(true)}
+                            className="flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                          >
+                            <UserMinus className="h-3.5 w-3.5" />
+                            {t('app.remove_partner_btn')}
+                          </button>
+                        )}
                       </div>
                       <SliderInput
                         id="barvermoegen2"
