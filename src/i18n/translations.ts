@@ -102,7 +102,7 @@ export const translations = {
             label_pk_monthly: 'Monatlich in Pensionskasse',
             hint_pk_monthly: 'Dieser Betrag umfasst Ihren Lohnabzug für die Pensionskasse plus den Arbeitgeberbeitrag.',
             label_other_monthly: 'Freie Sparrate pro Monat',
-            hint_other_monthly: 'Zusätzliche Ersparnisse, die nicht in 3a oder Pensionskasse fliessen.',,
+            hint_other_monthly: 'Zusätzliche Ersparnisse, die nicht in 3a oder Pensionskasse fliessen.',
 
             step_progress: 'Schritt {current} von {total}',
             btn_back: 'Zurück',
