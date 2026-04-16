@@ -8,16 +8,19 @@ A modern, interactive React application designed to help future Swiss homeowners
 -   **Swiss Mortgage Rules**: Automatically checks for:
     -   Minimum 20% total equity.
     -   Minimum 10% "Hard Equity" (not from Pension Fund).
+-   **Two-Person Mode**: Add a partner to combine assets and monthly contributions from both people.
 -   **Visualizations**:
     -   **Equity Breakdown**: Donut chart showing the composition of your potential downpayment.
-    -   **Growth Projection**: 3-Way Stacked Area Chart projecting your future assets over time.
+    -   **Growth Projection**: Stacked Area Chart projecting your future assets over time.
         -   **Blue**: Liquid Assets (Cash, Savings).
-        -   **Indigo**: Pillar 3a (Restricted).
+        -   **Violet**: Pillar 3a (Restricted).
         -   **Green**: Pension Fund (Soft Equity).
     -   **Combined Tooltips**: Hover over charts to see exact values for specific dates.
--   **New! Multi-Language Support**: Switch instantly between German 🇩🇪 and English 🇺🇸. Fully internationalized interface, including charts and date pickers.
--   **New! Setup Assistant (Wizard)**: A step-by-step assistant toguide beginners through the process of setting up their calculation, explaining key concepts (like Pension Fund vs. Cash) along the way.
+-   **Multi-Language Support**: Switch instantly between German 🇩🇪 and English 🇺🇸. Fully internationalized interface, including charts and date pickers.
+-   **Setup Assistant (Wizard)**: A step-by-step assistant to guide beginners through the process of setting up their calculation, explaining key concepts (like Pension Fund vs. Cash) along the way.
 -   **Target Date Planning**: Integrated custom **Month Picker** to easily set your buying horizon.
+-   **Dark Mode**: Toggle between light and dark themes, persisted in localStorage.
+-   **Persistent State**: All inputs are saved to localStorage and restored on reload.
 -   **Helpful Hints**: Explanations for complex topics (e.g. Pension Fund employer contributions).
 
 ## Tech Stack
@@ -49,9 +52,12 @@ A modern, interactive React application designed to help future Swiss homeowners
 
 ## Project Structure
 
--   `src/App.tsx`: Main application logic and layout.
--   `src/i18n/`: Internationalization logic and translation files.
--   `src/components/GrowthChart.tsx`: Custom stacked area chart visualization.
--   `src/components/MonthPicker.tsx`: Accessible month/year selection component.
--   `src/components/DonutChart.tsx`: Equity composition chart.
--   `src/components/Wizard.tsx`: Step-by-step setup assistant.
+-   `src/App.tsx`: All state, derived calculations, and layout.
+-   `src/i18n/`: Internationalization — `translations.ts` (all strings), `LanguageContext.tsx` (`useLanguage` hook).
+-   `src/components/GrowthChart.tsx`: Stacked area chart; supports optional `*2` props for two-person mode.
+-   `src/components/DonutChart.tsx`: Equity composition donut chart.
+-   `src/components/SliderInput.tsx`: Shared slider + text input for money values.
+-   `src/components/MonthPicker.tsx`: Accessible month/year selection (Radix Popover).
+-   `src/components/Wizard.tsx`: Step-by-step setup modal.
+-   `src/components/ThemeProvider.tsx` / `ThemeToggle.tsx`: Light/dark theme support.
+-   `src/components/LanguageSwitcher.tsx`: DE/EN language toggle.

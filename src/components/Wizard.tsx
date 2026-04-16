@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { ChevronRight, Check, X } from "lucide-react"
+import { ChevronRight, Check, X, Users } from "lucide-react"
 import { SliderInput } from "./SliderInput"
 import { MonthPicker } from "./MonthPicker"
 import { useLanguage } from "../i18n/LanguageContext"
@@ -14,6 +14,14 @@ export type WizardValues = {
     saeule3aMonatlich: string
     pensionskasseMonatlich: string
     sonstigeSparrateMonatlich: string
+    person2Active: boolean
+    barvermoegen2: string
+    saeule3a2: string
+    pensionskasse2: string
+    andereVermoegen2: string
+    saeule3aMonatlich2: string
+    pensionskasseMonatlich2: string
+    sonstigeSparrateMonatlich2: string
 }
 
 type WizardProps = {
@@ -28,7 +36,6 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
     const [step, setStep] = useState(0)
     const [values, setValues] = useState<WizardValues>(initialValues)
 
-    // Reset internal state when opening
     useEffect(() => {
         if (isOpen) {
             setValues(initialValues)
@@ -46,9 +53,27 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
         onClose()
     }
 
-    const updateValue = (key: keyof WizardValues, val: string) => {
+    const updateValue = (key: keyof WizardValues, val: string | boolean) => {
         setValues((prev) => ({ ...prev, [key]: val }))
     }
+
+    const PartnerToggle = () => (
+        <button
+            type="button"
+            onClick={() => updateValue("person2Active", !values.person2Active)}
+            className={`flex items-center gap-2 w-full px-4 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                values.person2Active
+                    ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20'
+            }`}
+        >
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="flex-1 text-left">{t('wizard.toggle_partner')}</span>
+            <div className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${values.person2Active ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${values.person2Active ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </div>
+        </button>
+    )
 
     const steps = [
         {
@@ -56,17 +81,13 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
             description: t('wizard.step_1_desc'),
             content: (
                 <div className="space-y-4 text-slate-600 dark:text-slate-400">
-                    <p>
-                        {t('wizard.step_1_text')}
-                    </p>
+                    <p>{t('wizard.step_1_text')}</p>
                     <ul className="list-disc pl-5 space-y-2">
                         <li>{t('wizard.step_1_li_1')}</li>
                         <li>{t('wizard.step_1_li_2')}</li>
                         <li>{t('wizard.step_1_li_3')}</li>
                     </ul>
-                    <p>
-                        {t('wizard.step_1_end')}
-                    </p>
+                    <p>{t('wizard.step_1_end')}</p>
                 </div>
             ),
         },
@@ -106,6 +127,13 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl text-sm text-amber-800 dark:text-amber-200">
                         {t('wizard.step_3_info')}
                     </div>
+                    <PartnerToggle />
+                    {/* Person 1 */}
+                    {values.person2Active && (
+                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            Person 1
+                        </div>
+                    )}
                     <SliderInput
                         id="wiz-bar"
                         label={t('wizard.label_bar')}
@@ -130,6 +158,40 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                         max={500000}
                         step={1000}
                     />
+                    {/* Person 2 */}
+                    {values.person2Active && (
+                        <>
+                            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                    {t('wizard.partner_section')}
+                                </div>
+                            </div>
+                            <SliderInput
+                                id="wiz-bar2"
+                                label={t('wizard.label_bar')}
+                                value={values.barvermoegen2}
+                                onChange={(v) => updateValue("barvermoegen2", v)}
+                                max={500000}
+                                step={1000}
+                            />
+                            <SliderInput
+                                id="wiz-3a2"
+                                label={t('wizard.label_3a')}
+                                value={values.saeule3a2}
+                                onChange={(v) => updateValue("saeule3a2", v)}
+                                max={200000}
+                                step={1000}
+                            />
+                            <SliderInput
+                                id="wiz-pk2"
+                                label={t('wizard.label_pk')}
+                                value={values.pensionskasse2}
+                                onChange={(v) => updateValue("pensionskasse2", v)}
+                                max={500000}
+                                step={1000}
+                            />
+                        </>
+                    )}
                 </div>
             )
         },
@@ -141,6 +203,12 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl text-sm text-emerald-800 dark:text-emerald-200">
                         {t('wizard.step_4_info')}
                     </div>
+                    {/* Person 1 */}
+                    {values.person2Active && (
+                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            Person 1
+                        </div>
+                    )}
                     <SliderInput
                         id="wiz-3a-mt"
                         label={t('wizard.label_3a_monthly')}
@@ -167,6 +235,42 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                         step={50}
                         hint={t('wizard.hint_other_monthly')}
                     />
+                    {/* Person 2 */}
+                    {values.person2Active && (
+                        <>
+                            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                    {t('wizard.partner_section')}
+                                </div>
+                            </div>
+                            <SliderInput
+                                id="wiz-3a-mt2"
+                                label={t('wizard.label_3a_monthly')}
+                                value={values.saeule3aMonatlich2}
+                                onChange={(v) => updateValue("saeule3aMonatlich2", v)}
+                                max={3000}
+                                step={50}
+                            />
+                            <SliderInput
+                                id="wiz-pk-mt2"
+                                label={t('wizard.label_pk_monthly')}
+                                value={values.pensionskasseMonatlich2}
+                                onChange={(v) => updateValue("pensionskasseMonatlich2", v)}
+                                max={5000}
+                                step={50}
+                                hint={t('wizard.hint_pk_monthly')}
+                            />
+                            <SliderInput
+                                id="wiz-other-mt2"
+                                label={t('wizard.label_other_monthly')}
+                                value={values.sonstigeSparrateMonatlich2}
+                                onChange={(v) => updateValue("sonstigeSparrateMonatlich2", v)}
+                                max={20000}
+                                step={50}
+                                hint={t('wizard.hint_other_monthly')}
+                            />
+                        </>
+                    )}
                 </div>
             )
         }
@@ -180,10 +284,8 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
             <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                            {t('wizard.step_progress', { current: step + 1, total: steps.length })}
-                        </div>
+                    <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                        {t('wizard.step_progress', { current: step + 1, total: steps.length })}
                     </div>
                     <button
                         onClick={onClose}
@@ -213,7 +315,6 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     >
                         {t('wizard.btn_back')}
                     </button>
-
                     <div className="flex gap-2">
                         {isLastStep ? (
                             <button

@@ -51,6 +51,13 @@ export const translations = {
             card_growth_desc: 'Prognose bis zum Zielmonat unter Einhaltung der empfohlenen Sparrate',
             growth_note: 'Grafik zeigt theoretischen Verlauf inkl. empfohlener Sparrate',
             picker_placeholder: 'Datum wählen',
+
+            person1_section: 'Person 1',
+            person2_section: 'Partner / in',
+            add_partner_btn: 'Partner hinzufügen',
+            remove_partner_btn: 'Partner entfernen',
+            person1_total_label: 'Person 1 gesamt',
+            person2_total_label: 'Partner gesamt',
         },
         charts: {
             label_liquid: 'Liquide Mittel',
@@ -61,6 +68,8 @@ export const translations = {
             label_total: 'Total',
             unknown: 'Unbekannt',
             donut_center_label: 'des Ziels erreicht',
+            label_person1: 'Person 1',
+            label_person2: 'Partner',
         },
         wizard: {
             step_1_title: 'Willkommen',
@@ -83,6 +92,8 @@ export const translations = {
             label_bar: 'Barvermögen / Sparkonto',
             label_3a: 'Guthaben Säule 3a',
             label_pk: 'Pensionskasse (Vorbezug oder Verpfändung)',
+            toggle_partner: 'Partner/-in einbeziehen',
+            partner_section: 'Partner/-in',
 
             step_4_title: 'Monatliches Sparen',
             step_4_desc: 'Wie viel können Sie bis zum Kaufdatum monatlich zur Seite legen?',
@@ -91,7 +102,7 @@ export const translations = {
             label_pk_monthly: 'Monatlich in Pensionskasse',
             hint_pk_monthly: 'Dieser Betrag umfasst Ihren Lohnabzug für die Pensionskasse plus den Arbeitgeberbeitrag.',
             label_other_monthly: 'Freie Sparrate pro Monat',
-            hint_other_monthly: 'Zusätzliche Ersparnisse, die nicht in 3a oder Pensionskasse fliessen.',
+            hint_other_monthly: 'Zusätzliche Ersparnisse, die nicht in 3a oder Pensionskasse fliessen.',,
 
             step_progress: 'Schritt {current} von {total}',
             btn_back: 'Zurück',
@@ -151,6 +162,13 @@ export const translations = {
             card_growth_desc: 'Projection until target month maintaining recommended savings rate',
             growth_note: 'Graph shows theoretical progression including recommended savings',
             picker_placeholder: 'Select Date',
+
+            person1_section: 'Person 1',
+            person2_section: 'Partner',
+            add_partner_btn: 'Add Partner',
+            remove_partner_btn: 'Remove Partner',
+            person1_total_label: 'Person 1 total',
+            person2_total_label: 'Partner total',
         },
         charts: {
             label_liquid: 'Liquid Assets',
@@ -161,6 +179,8 @@ export const translations = {
             label_total: 'Total',
             unknown: 'Unknown',
             donut_center_label: 'of goal reached',
+            label_person1: 'Person 1',
+            label_person2: 'Partner',
         },
         wizard: {
             step_1_title: 'Welcome',
@@ -183,6 +203,8 @@ export const translations = {
             label_bar: 'Cash / Savings Account',
             label_3a: 'Pillar 3a Assets',
             label_pk: 'Pension Fund (Withdrawal or Pledge)',
+            toggle_partner: 'Include partner',
+            partner_section: 'Partner',
 
             step_4_title: 'Monthly Savings',
             step_4_desc: 'How much can you save monthly until the purchase date?',

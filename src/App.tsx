@@ -4,6 +4,8 @@ import {
   Coins,
   Landmark,
   PiggyBank,
+  UserMinus,
+  UserPlus,
   Wallet,
   Wand2,
 } from 'lucide-react'
@@ -190,6 +192,17 @@ function AppContent() {
   const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich', '0')
   const [sonstigeSparrateMonatlich, setSonstigeSparrateMonatlich] = usePersistentState('sonstigeSparrateMonatlich', '0')
 
+  // Person 2
+  const [person2Active, setPerson2Active] = useState(() => localStorage.getItem('person2Active') === 'true')
+  useEffect(() => { localStorage.setItem('person2Active', String(person2Active)) }, [person2Active])
+  const [barvermoegen2, setBarvermoegen2] = usePersistentState('barvermoegen2', '0')
+  const [saeule3a2, setSaeule3a2] = usePersistentState('saeule3a2', '0')
+  const [pensionskasse2, setPensionskasse2] = usePersistentState('pensionskasse2', '0')
+  const [andereVermoegen2, setAndereVermoegen2] = usePersistentState('andereVermoegen2', '0')
+  const [saeule3aMonatlich2, setSaeule3aMonatlich2] = usePersistentState('saeule3aMonatlich2', '0')
+  const [pensionskasseMonatlich2, setPensionskasseMonatlich2] = usePersistentState('pensionskasseMonatlich2', '0')
+  const [sonstigeSparrateMonatlich2, setSonstigeSparrateMonatlich2] = usePersistentState('sonstigeSparrateMonatlich2', '0')
+
   const handleWizardComplete = (values: WizardValues) => {
     setKaufpreis(values.kaufpreis)
     setZielMonat(values.zielMonat)
@@ -200,6 +213,14 @@ function AppContent() {
     setSaeule3aMonatlich(values.saeule3aMonatlich)
     setPensionskasseMonatlich(values.pensionskasseMonatlich)
     setSonstigeSparrateMonatlich(values.sonstigeSparrateMonatlich)
+    setPerson2Active(values.person2Active)
+    setBarvermoegen2(values.barvermoegen2)
+    setSaeule3a2(values.saeule3a2)
+    setPensionskasse2(values.pensionskasse2)
+    setAndereVermoegen2(values.andereVermoegen2)
+    setSaeule3aMonatlich2(values.saeule3aMonatlich2)
+    setPensionskasseMonatlich2(values.pensionskasseMonatlich2)
+    setSonstigeSparrateMonatlich2(values.sonstigeSparrateMonatlich2)
   }
 
   const kaufpreisN = useMemo(() => parseMoney(kaufpreis), [kaufpreis])
@@ -211,6 +232,14 @@ function AppContent() {
   const pkMonthlyN = useMemo(() => parseMoney(pensionskasseMonatlich), [pensionskasseMonatlich])
   const otherMonthlySavingsN = useMemo(() => parseMoney(sonstigeSparrateMonatlich), [sonstigeSparrateMonatlich])
 
+  const barN2 = useMemo(() => person2Active ? parseMoney(barvermoegen2) : 0, [person2Active, barvermoegen2])
+  const s3aN2 = useMemo(() => person2Active ? parseMoney(saeule3a2) : 0, [person2Active, saeule3a2])
+  const pkN2 = useMemo(() => person2Active ? parseMoney(pensionskasse2) : 0, [person2Active, pensionskasse2])
+  const otherN2 = useMemo(() => person2Active ? parseMoney(andereVermoegen2) : 0, [person2Active, andereVermoegen2])
+  const s3aMonthlyN2 = useMemo(() => person2Active ? parseMoney(saeule3aMonatlich2) : 0, [person2Active, saeule3aMonatlich2])
+  const pkMonthlyN2 = useMemo(() => person2Active ? parseMoney(pensionskasseMonatlich2) : 0, [person2Active, pensionskasseMonatlich2])
+  const otherMonthlySavingsN2 = useMemo(() => person2Active ? parseMoney(sonstigeSparrateMonatlich2) : 0, [person2Active, sonstigeSparrateMonatlich2])
+
   const totalRequired = useMemo(() => kaufpreisN * 0.2, [kaufpreisN])
   const hardRequired = useMemo(() => kaufpreisN * 0.1, [kaufpreisN])
 
@@ -221,20 +250,38 @@ function AppContent() {
     [zielMonat],
   )
 
-  const s3aProjected = useMemo(() => s3aN + s3aMonthlyN * monthsRemaining, [monthsRemaining, s3aMonthlyN, s3aN])
-  const pkProjected = useMemo(() => pkN + pkMonthlyN * monthsRemaining, [monthsRemaining, pkMonthlyN, pkN])
-  const otherProjected = useMemo(
-    () => otherN + otherMonthlySavingsN * monthsRemaining,
-    [monthsRemaining, otherMonthlySavingsN, otherN],
-  )
+  // Person 1 projections
+  const s3aProjected1 = useMemo(() => s3aN + s3aMonthlyN * monthsRemaining, [monthsRemaining, s3aMonthlyN, s3aN])
+  const pkProjected1 = useMemo(() => pkN + pkMonthlyN * monthsRemaining, [monthsRemaining, pkMonthlyN, pkN])
+  const otherProjected1 = useMemo(() => otherN + otherMonthlySavingsN * monthsRemaining, [monthsRemaining, otherMonthlySavingsN, otherN])
+
+  // Person 2 projections
+  const s3aProjected2 = useMemo(() => s3aN2 + s3aMonthlyN2 * monthsRemaining, [monthsRemaining, s3aMonthlyN2, s3aN2])
+  const pkProjected2 = useMemo(() => pkN2 + pkMonthlyN2 * monthsRemaining, [monthsRemaining, pkMonthlyN2, pkN2])
+  const otherProjected2 = useMemo(() => otherN2 + otherMonthlySavingsN2 * monthsRemaining, [monthsRemaining, otherMonthlySavingsN2, otherN2])
+
+  // Combined
+  const s3aProjected = useMemo(() => s3aProjected1 + s3aProjected2, [s3aProjected1, s3aProjected2])
+  const pkProjected = useMemo(() => pkProjected1 + pkProjected2, [pkProjected1, pkProjected2])
+  const otherProjected = useMemo(() => otherProjected1 + otherProjected2, [otherProjected1, otherProjected2])
 
   const totalAssetsAtTarget = useMemo(
-    () => barN + otherProjected + s3aProjected + pkProjected,
-    [barN, otherProjected, pkProjected, s3aProjected],
+    () => (barN + barN2) + otherProjected + s3aProjected + pkProjected,
+    [barN, barN2, otherProjected, pkProjected, s3aProjected],
   )
   const hardAssetsAtTarget = useMemo(
-    () => barN + otherProjected + s3aProjected,
-    [barN, otherProjected, s3aProjected],
+    () => (barN + barN2) + otherProjected + s3aProjected,
+    [barN, barN2, otherProjected, s3aProjected],
+  )
+
+  // Per-person totals at target (for breakdown display)
+  const hardP1AtTarget = useMemo(
+    () => barN + otherProjected1 + s3aProjected1,
+    [barN, otherProjected1, s3aProjected1],
+  )
+  const hardP2AtTarget = useMemo(
+    () => barN2 + otherProjected2 + s3aProjected2,
+    [barN2, otherProjected2, s3aProjected2],
   )
 
   const totalShortfallAtTarget = useMemo(
@@ -318,6 +365,14 @@ function AppContent() {
               saeule3aMonatlich,
               pensionskasseMonatlich,
               sonstigeSparrateMonatlich,
+              person2Active,
+              barvermoegen2,
+              saeule3a2,
+              pensionskasse2,
+              andereVermoegen2,
+              saeule3aMonatlich2,
+              pensionskasseMonatlich2,
+              sonstigeSparrateMonatlich2,
             }}
           />
 
@@ -361,12 +416,30 @@ function AppContent() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_assets_title')}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">
-                    {t('app.card_assets_desc')}
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_assets_title')}</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
+                        {t('app.card_assets_desc')}
+                      </div>
+                    </div>
+                    {!person2Active && (
+                      <button
+                        onClick={() => setPerson2Active(true)}
+                        className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        {t('app.add_partner_btn')}
+                      </button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
+                  {person2Active && (
+                    <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                      {t('app.person1_section')}
+                    </div>
+                  )}
                   <SliderInput
                     id="barvermoegen"
                     label={t('app.label_bar')}
@@ -405,6 +478,60 @@ function AppContent() {
                     hint={t('app.hint_other')}
                     icon={<Coins className="h-4 w-4" />}
                   />
+                  {person2Active && (
+                    <>
+                      <div className="flex items-center gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-1">
+                          {t('app.person2_section')}
+                        </div>
+                        <button
+                          onClick={() => setPerson2Active(false)}
+                          className="flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        >
+                          <UserMinus className="h-3.5 w-3.5" />
+                          {t('app.remove_partner_btn')}
+                        </button>
+                      </div>
+                      <SliderInput
+                        id="barvermoegen2"
+                        label={t('app.label_bar')}
+                        value={barvermoegen2}
+                        onChange={setBarvermoegen2}
+                        max={500000}
+                        step={1000}
+                        icon={<Wallet className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="saeule3a2"
+                        label={t('app.label_3a')}
+                        value={saeule3a2}
+                        onChange={setSaeule3a2}
+                        max={200000}
+                        step={1000}
+                        icon={<PiggyBank className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="pensionskasse2"
+                        label={t('app.label_pk')}
+                        value={pensionskasse2}
+                        onChange={setPensionskasse2}
+                        max={500000}
+                        step={1000}
+                        hint={t('app.hint_pk')}
+                        icon={<Landmark className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="andere2"
+                        label={t('app.label_other')}
+                        value={andereVermoegen2}
+                        onChange={setAndereVermoegen2}
+                        max={200000}
+                        step={1000}
+                        hint={t('app.hint_other')}
+                        icon={<Coins className="h-4 w-4" />}
+                      />
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -416,6 +543,11 @@ function AppContent() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-8">
+                  {person2Active && (
+                    <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                      {t('app.person1_section')}
+                    </div>
+                  )}
                   <SliderInput
                     id="saeule3aMonatlich"
                     label={t('app.label_3a_monthly')}
@@ -445,6 +577,44 @@ function AppContent() {
                     hint={t('app.hint_other_monthly')}
                     icon={<Wallet className="h-4 w-4" />}
                   />
+                  {person2Active && (
+                    <>
+                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                          {t('app.person2_section')}
+                        </div>
+                      </div>
+                      <SliderInput
+                        id="saeule3aMonatlich2"
+                        label={t('app.label_3a_monthly')}
+                        value={saeule3aMonatlich2}
+                        onChange={setSaeule3aMonatlich2}
+                        max={3000}
+                        step={50}
+                        icon={<PiggyBank className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="pensionskasseMonatlich2"
+                        label={t('app.label_pk_monthly')}
+                        value={pensionskasseMonatlich2}
+                        onChange={setPensionskasseMonatlich2}
+                        max={5000}
+                        step={50}
+                        hint={t('app.hint_pk_monthly')}
+                        icon={<Landmark className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="sonstigeSparrateMonatlich2"
+                        label={t('app.label_other_monthly')}
+                        value={sonstigeSparrateMonatlich2}
+                        onChange={setSonstigeSparrateMonatlich2}
+                        max={20000}
+                        step={50}
+                        hint={t('app.hint_other_monthly')}
+                        icon={<Wallet className="h-4 w-4" />}
+                      />
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -475,23 +645,53 @@ function AppContent() {
                   <div className="flex flex-col items-center">
                     <DonutChart
                       hardEquity={hardAssetsAtTarget}
-                      softEquity={pkN + pkMonthlyN * monthsRemaining}
+                      softEquity={pkProjected}
                       gap={savingsGap}
                       target={totalRequired}
                     />
-                    <div className="mt-6 flex flex-wrap justify-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-400">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-3 w-3 rounded-full bg-emerald-500" />
-                        <span>{t('app.chart_hard')} ({formatCHF(hardAssetsAtTarget, { decimals: 0 })})</span>
+                    <div className="mt-6 w-full space-y-3">
+                      {/* Hard equity row */}
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                        <div className="h-3 w-3 shrink-0 rounded-full bg-emerald-500" />
+                        <span className="flex-1">{t('app.chart_hard')}</span>
+                        {person2Active ? (
+                          <div className="flex gap-3 tabular-nums">
+                            <span className="text-slate-500 dark:text-slate-400">
+                              {t('app.person1_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(hardP1AtTarget, { decimals: 0 })}</span>
+                            </span>
+                            <span className="text-slate-400 dark:text-slate-600">·</span>
+                            <span className="text-slate-500 dark:text-slate-400">
+                              {t('app.person2_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(hardP2AtTarget, { decimals: 0 })}</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="tabular-nums font-semibold text-slate-700 dark:text-slate-200">{formatCHF(hardAssetsAtTarget, { decimals: 0 })}</span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-3 w-3 rounded-full bg-blue-500" />
-                        <span>{t('app.chart_pk')} ({formatCHF(pkN + pkMonthlyN * monthsRemaining, { decimals: 0 })})</span>
+                      {/* Pension row */}
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                        <div className="h-3 w-3 shrink-0 rounded-full bg-blue-500" />
+                        <span className="flex-1">{t('app.chart_pk')}</span>
+                        {person2Active ? (
+                          <div className="flex gap-3 tabular-nums">
+                            <span className="text-slate-500 dark:text-slate-400">
+                              {t('app.person1_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(pkProjected1, { decimals: 0 })}</span>
+                            </span>
+                            <span className="text-slate-400 dark:text-slate-600">·</span>
+                            <span className="text-slate-500 dark:text-slate-400">
+                              {t('app.person2_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(pkProjected2, { decimals: 0 })}</span>
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="tabular-nums font-semibold text-slate-700 dark:text-slate-200">{formatCHF(pkProjected, { decimals: 0 })}</span>
+                        )}
                       </div>
+                      {/* Gap row */}
                       {savingsGap > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-3 w-3 rounded-full bg-slate-200 dark:bg-slate-700" />
-                          <span>{t('app.chart_gap')} ({formatCHF(savingsGap, { decimals: 0 })})</span>
+                        <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                          <div className="h-3 w-3 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600" />
+                          <span className="flex-1">{t('app.chart_gap')}</span>
+                          <span className="tabular-nums font-semibold text-slate-700 dark:text-slate-200">{formatCHF(savingsGap, { decimals: 0 })}</span>
                         </div>
                       )}
                     </div>
@@ -538,6 +738,14 @@ function AppContent() {
                     monthly3aContribution={s3aMonthlyN}
                     currentPKAssets={pkN}
                     monthlyPKContribution={pkMonthlyN}
+                    {...(person2Active ? {
+                      currentLiquidAssets2: barN2 + otherN2,
+                      monthlyLiquidContribution2: otherMonthlySavingsN2,
+                      current3aAssets2: s3aN2,
+                      monthly3aContribution2: s3aMonthlyN2,
+                      currentPKAssets2: pkN2,
+                      monthlyPKContribution2: pkMonthlyN2,
+                    } : {})}
                     months={monthsRemaining + 12}
                     targetAmount={totalRequired}
                   />
