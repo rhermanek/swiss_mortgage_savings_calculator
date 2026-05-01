@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
+  Banknote,
   Check,
   Coins,
   Info,
@@ -10,6 +11,7 @@ import {
   UserPlus,
   Wallet,
   Wand2,
+  X,
 } from 'lucide-react'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { GrowthChart } from './components/GrowthChart'
@@ -232,6 +234,8 @@ function AppContent() {
   const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich', '500')
   const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich', '0')
   const [sonstigeSparrateMonatlich, setSonstigeSparrateMonatlich] = usePersistentState('sonstigeSparrateMonatlich', '0')
+  const [bruttoeinkommen, setBruttoeinkommen] = usePersistentState('bruttoeinkommen', '0')
+  const [bruttoeinkommen2, setBruttoeinkommen2] = usePersistentState('bruttoeinkommen2', '0')
 
   // Person 2
   const [person2Active, setPerson2Active] = useState(() => localStorage.getItem('person2Active') === 'true')
@@ -381,6 +385,31 @@ function AppContent() {
   const todaySoftTotal = pkN + pkN2
   const todayTotal = todayHardTotal + todaySoftTotal
   const todayPct = totalRequired > 0 ? Math.min(100, (todayTotal / totalRequired) * 100) : 0
+
+  // Tragbarkeit (Swiss affordability check)
+  const incomeN = useMemo(() => parseMoney(bruttoeinkommen), [bruttoeinkommen])
+  const incomeN2 = useMemo(() => person2Active ? parseMoney(bruttoeinkommen2) : 0, [person2Active, bruttoeinkommen2])
+  const totalIncome = incomeN + incomeN2
+
+  const TRAGBARKEIT_INTEREST_RATE = 0.05
+  const TRAGBARKEIT_MAINTENANCE_RATE = 0.01
+  const TRAGBARKEIT_AMORT_TARGET_LTV = 0.65
+  const TRAGBARKEIT_AMORT_YEARS = 15
+  const TRAGBARKEIT_MAX_RATIO = 1 / 3
+
+  const mortgageAmount = useMemo(() => kaufpreisN * 0.8, [kaufpreisN])
+  const annualInterest = useMemo(() => mortgageAmount * TRAGBARKEIT_INTEREST_RATE, [mortgageAmount])
+  const annualAmortization = useMemo(() => {
+    const targetMortgage = kaufpreisN * TRAGBARKEIT_AMORT_TARGET_LTV
+    const excess = Math.max(0, mortgageAmount - targetMortgage)
+    return excess / TRAGBARKEIT_AMORT_YEARS
+  }, [kaufpreisN, mortgageAmount])
+  const annualMaintenance = useMemo(() => kaufpreisN * TRAGBARKEIT_MAINTENANCE_RATE, [kaufpreisN])
+  const annualHousingCost = annualInterest + annualAmortization + annualMaintenance
+
+  const tragbarkeitRatio = totalIncome > 0 ? annualHousingCost / totalIncome : 0
+  const tragbarkeitPasses = totalIncome > 0 && tragbarkeitRatio <= TRAGBARKEIT_MAX_RATIO
+  const requiredIncome = annualHousingCost / TRAGBARKEIT_MAX_RATIO
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
@@ -731,6 +760,41 @@ function AppContent() {
                   )}
                 </CardContent>
               </Card>
+
+              <Card className="dark:bg-slate-900 dark:border-slate-800">
+                <CardHeader className="dark:border-slate-800">
+                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_income_title')}</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">{t('app.card_income_desc')}</div>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                  {person2Active && (
+                    <PersonTabs personTab={personTab} setPersonTab={setPersonTab} t={t} />
+                  )}
+                  {personTab === '1' || !person2Active ? (
+                    <SliderInput
+                      id="bruttoeinkommen"
+                      label={t('app.label_income')}
+                      value={bruttoeinkommen}
+                      onChange={setBruttoeinkommen}
+                      max={500000}
+                      step={1000}
+                      hint={t('app.hint_income')}
+                      icon={<Banknote className="h-4 w-4" />}
+                    />
+                  ) : (
+                    <SliderInput
+                      id="bruttoeinkommen2"
+                      label={t('app.label_income')}
+                      value={bruttoeinkommen2}
+                      onChange={setBruttoeinkommen2}
+                      max={500000}
+                      step={1000}
+                      hint={t('app.hint_income')}
+                      icon={<Banknote className="h-4 w-4" />}
+                    />
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
             {/* Right Column: Analysis */}
@@ -879,6 +943,100 @@ function AppContent() {
                         {t('app.warning_hard_desc', { amount: formatCHF(hardShortfallAtTarget) })}
                       </div>
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="dark:bg-slate-900 dark:border-slate-800">
+                <CardHeader className="dark:border-slate-800">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_tragbarkeit_title')}</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">{t('app.card_tragbarkeit_desc')}</div>
+                    </div>
+                    {priceValid && totalIncome > 0 && (
+                      <Pill tone={tragbarkeitPasses ? 'ok' : 'warn'}>
+                        {tragbarkeitPasses ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                        {tragbarkeitPasses ? t('app.tragbarkeit_pass') : t('app.tragbarkeit_fail')}
+                      </Pill>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {!priceValid || totalIncome <= 0 ? (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('app.tragbarkeit_no_income')}</p>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm text-slate-500 dark:text-slate-400">{t('app.tragbarkeit_ratio_label')}</span>
+                          <span className={cx(
+                            'text-2xl font-bold tabular-nums',
+                            tragbarkeitPasses ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400',
+                          )}>
+                            {Math.round(tragbarkeitRatio * 100)}%
+                          </span>
+                        </div>
+                        <div className="relative h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                          <div
+                            className={cx(
+                              'h-full transition-all',
+                              tragbarkeitPasses ? 'bg-emerald-500' : 'bg-amber-500',
+                            )}
+                            style={{ width: `${Math.min(100, tragbarkeitRatio * 100)}%` }}
+                          />
+                          <div
+                            className="pointer-events-none absolute top-0 h-full w-px bg-slate-700 dark:bg-slate-200"
+                            style={{ left: `${TRAGBARKEIT_MAX_RATIO * 100}%` }}
+                            title={t('app.tragbarkeit_threshold')}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                          <span>0%</span>
+                          <span className="ml-auto" style={{ marginRight: `${(1 - TRAGBARKEIT_MAX_RATIO) * 100 - 5}%` }}>{t('app.tragbarkeit_threshold')}</span>
+                          <span>100%</span>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2 text-sm">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                          {t('app.tragbarkeit_breakdown_label')}
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">{t('app.tragbarkeit_breakdown_interest')}</span>
+                          <span className="tabular-nums font-medium">{formatCHF(annualInterest, { decimals: 0 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">{t('app.tragbarkeit_breakdown_amortization')}</span>
+                          <span className="tabular-nums font-medium">{formatCHF(annualAmortization, { decimals: 0 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 dark:text-slate-400">{t('app.tragbarkeit_breakdown_maintenance')}</span>
+                          <span className="tabular-nums font-medium">{formatCHF(annualMaintenance, { decimals: 0 })}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-slate-200 dark:border-slate-800 pt-2 font-semibold">
+                          <span>{t('app.tragbarkeit_breakdown_total')}</span>
+                          <span className="tabular-nums">{formatCHF(annualHousingCost, { decimals: 0 })}</span>
+                        </div>
+                      </div>
+
+                      {!tragbarkeitPasses && (
+                        <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-900 dark:text-amber-200 border border-amber-100 dark:border-amber-900/50">
+                          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-500" />
+                          <div>
+                            <span className="font-medium">{t('app.tragbarkeit_required_income')}: </span>
+                            <span className="tabular-nums font-semibold">{formatCHF(requiredIncome, { decimals: 0 })}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <details className="text-xs text-slate-500 dark:text-slate-400">
+                        <summary className="cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
+                          {t('app.tragbarkeit_assumptions_title')}
+                        </summary>
+                        <p className="mt-2 leading-relaxed">{t('app.tragbarkeit_assumptions_desc')}</p>
+                      </details>
+                    </>
                   )}
                 </CardContent>
               </Card>
