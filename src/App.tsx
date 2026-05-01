@@ -257,7 +257,9 @@ function AppContent() {
 
   const [equityPct, setEquityPct] = usePersistentState('equityPct', '20')
   const [softEquityPct, setSoftEquityPct] = usePersistentState('softEquityPct', '10')
-  const [growthRate, setGrowthRate] = usePersistentState('growthRate', '0')
+  const [growthRateLiquid, setGrowthRateLiquid] = usePersistentState('growthRateLiquid', '0')
+  const [growthRate3a, setGrowthRate3a] = usePersistentState('growthRate3a', '0')
+  const [growthRatePK, setGrowthRatePK] = usePersistentState('growthRatePK', '0')
 
   // Person 2
   const [person2Active, setPerson2Active] = useState(() => localStorage.getItem('person2Active') === 'true')
@@ -310,7 +312,9 @@ function AppContent() {
   const equityPctN = useMemo(() => clampNum(equityPct, 10, 50, 20), [equityPct])
   const softEquityCapN = equityPctN / 2 // legal max for soft = half of total equity
   const softEquityPctN = useMemo(() => clampNum(softEquityPct, 0, softEquityCapN, Math.min(10, softEquityCapN)), [softEquityCapN, softEquityPct])
-  const growthRateN = useMemo(() => clampNum(growthRate, 0, 20, 0) / 100, [growthRate])
+  const growthRateLiquidN = useMemo(() => clampNum(growthRateLiquid, 0, 20, 0) / 100, [growthRateLiquid])
+  const growthRate3aN = useMemo(() => clampNum(growthRate3a, 0, 20, 0) / 100, [growthRate3a])
+  const growthRatePKN = useMemo(() => clampNum(growthRatePK, 0, 20, 0) / 100, [growthRatePK])
 
   // Keep stored softEquityPct in sync when its cap shrinks (e.g. user lowered equityPct)
   useEffect(() => {
@@ -331,15 +335,15 @@ function AppContent() {
     [zielMonat],
   )
 
-  // Person 1 projections (compound monthly when growthRate > 0)
-  const s3aProjected1 = useMemo(() => projectCompound(s3aN, s3aMonthlyN, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, s3aMonthlyN, s3aN])
-  const pkProjected1 = useMemo(() => projectCompound(pkN, pkMonthlyN, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, pkMonthlyN, pkN])
-  const otherProjected1 = useMemo(() => projectCompound(otherN, otherMonthlySavingsN, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, otherMonthlySavingsN, otherN])
+  // Person 1 projections (compound monthly when its growth rate > 0)
+  const s3aProjected1 = useMemo(() => projectCompound(s3aN, s3aMonthlyN, growthRate3aN, monthsRemaining), [growthRate3aN, monthsRemaining, s3aMonthlyN, s3aN])
+  const pkProjected1 = useMemo(() => projectCompound(pkN, pkMonthlyN, growthRatePKN, monthsRemaining), [growthRatePKN, monthsRemaining, pkMonthlyN, pkN])
+  const otherProjected1 = useMemo(() => projectCompound(otherN, otherMonthlySavingsN, growthRateLiquidN, monthsRemaining), [growthRateLiquidN, monthsRemaining, otherMonthlySavingsN, otherN])
 
   // Person 2 projections
-  const s3aProjected2 = useMemo(() => projectCompound(s3aN2, s3aMonthlyN2, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, s3aMonthlyN2, s3aN2])
-  const pkProjected2 = useMemo(() => projectCompound(pkN2, pkMonthlyN2, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, pkMonthlyN2, pkN2])
-  const otherProjected2 = useMemo(() => projectCompound(otherN2, otherMonthlySavingsN2, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, otherMonthlySavingsN2, otherN2])
+  const s3aProjected2 = useMemo(() => projectCompound(s3aN2, s3aMonthlyN2, growthRate3aN, monthsRemaining), [growthRate3aN, monthsRemaining, s3aMonthlyN2, s3aN2])
+  const pkProjected2 = useMemo(() => projectCompound(pkN2, pkMonthlyN2, growthRatePKN, monthsRemaining), [growthRatePKN, monthsRemaining, pkMonthlyN2, pkN2])
+  const otherProjected2 = useMemo(() => projectCompound(otherN2, otherMonthlySavingsN2, growthRateLiquidN, monthsRemaining), [growthRateLiquidN, monthsRemaining, otherMonthlySavingsN2, otherN2])
 
   // Combined
   const s3aProjected = useMemo(() => s3aProjected1 + s3aProjected2, [s3aProjected1, s3aProjected2])
@@ -838,19 +842,45 @@ function AppContent() {
                     </>
                   )}
 
-                  <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
-                    <SliderInput
-                      id="growthRate"
-                      label={t('app.label_growth_rate')}
-                      value={growthRate}
-                      onChange={setGrowthRate}
-                      min={0}
-                      max={10}
-                      step={0.5}
-                      suffix="%"
-                      hint={t('app.hint_growth_rate')}
-                    />
-                  </div>
+                  <details className="border-t border-slate-200 dark:border-slate-800 pt-4">
+                    <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-50 inline-flex items-center gap-2">
+                      {t('app.growth_rates_title')}
+                      <span className="text-xs font-normal text-slate-400 dark:text-slate-500">{t('app.growth_rates_summary')}</span>
+                    </summary>
+                    <div className="mt-5 space-y-6">
+                      <SliderInput
+                        id="growthRateLiquid"
+                        label={t('app.label_growth_liquid')}
+                        value={growthRateLiquid}
+                        onChange={setGrowthRateLiquid}
+                        min={0}
+                        max={10}
+                        step={0.1}
+                        suffix="%"
+                      />
+                      <SliderInput
+                        id="growthRate3a"
+                        label={t('app.label_growth_3a')}
+                        value={growthRate3a}
+                        onChange={setGrowthRate3a}
+                        min={0}
+                        max={10}
+                        step={0.1}
+                        suffix="%"
+                      />
+                      <SliderInput
+                        id="growthRatePK"
+                        label={t('app.label_growth_pk')}
+                        value={growthRatePK}
+                        onChange={setGrowthRatePK}
+                        min={0}
+                        max={10}
+                        step={0.1}
+                        suffix="%"
+                        hint={t('app.growth_rate_hint')}
+                      />
+                    </div>
+                  </details>
                 </CardContent>
               </Card>
 
@@ -1037,6 +1067,15 @@ function AppContent() {
                       </div>
                     </div>
                   )}
+
+                  {priceValid && pkProjected > softMaxAllowed && (
+                    <div className="text-xs text-slate-500 dark:text-slate-400 italic">
+                      {t('app.pk_overflow', {
+                        amount: formatCHF(pkProjected - softMaxAllowed, { decimals: 0 }),
+                        pct: softEquityPctN,
+                      })}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1161,7 +1200,9 @@ function AppContent() {
                     months={monthsRemaining + 12}
                     targetAmount={totalRequired}
                     targetMonthIndex={monthsRemaining}
-                    annualRate={growthRateN}
+                    annualRateLiquid={growthRateLiquidN}
+                    annualRate3a={growthRate3aN}
+                    annualRatePK={growthRatePKN}
                   />
                   <div className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
                     {t('app.growth_note')}
@@ -1170,6 +1211,10 @@ function AppContent() {
               </Card>
             </div>
           </div>
+
+          <footer className="mt-12 border-t border-slate-200 dark:border-slate-800 pt-6 text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto text-center">
+            {t('app.disclaimer')}
+          </footer>
         </div>
       </div>
     </ThemeProvider>

@@ -121,6 +121,17 @@ export const translations = {
 
             card_assumptions_title: 'Annahmen',
             card_assumptions_desc: 'Eigenkapital-Aufteilung und Rendite',
+
+            disclaimer: 'Diese Berechnung ist eine Orientierungshilfe und stellt keine Finanz- oder Anlageberatung dar. Massgebend sind die Konditionen Ihres Finanzierungspartners.',
+
+            growth_rates_title: 'Erwartete Renditen p.a.',
+            growth_rates_summary: 'Pro Anlageklasse anpassbar',
+            label_growth_liquid: 'Liquide Mittel / Cash',
+            label_growth_3a: 'Säule 3a',
+            label_growth_pk: 'Pensionskasse',
+            growth_rate_hint: 'Standard 0 % = lineare Hochrechnung. PK-Mindestzins ist gesetzlich geregelt.',
+
+            pk_overflow: '{amount} aus der Pensionskasse übersteigen die {pct} %-Grenze und zählen nicht als Eigenkapital.',
         },
         charts: {
             label_liquid: 'Liquide Mittel',
@@ -299,6 +310,17 @@ export const translations = {
 
             card_assumptions_title: 'Assumptions',
             card_assumptions_desc: 'Equity split and expected return',
+
+            disclaimer: 'This calculation is for orientation only and is not financial or investment advice. The terms offered by your financing partner are decisive.',
+
+            growth_rates_title: 'Expected returns p.a.',
+            growth_rates_summary: 'Configurable per asset class',
+            label_growth_liquid: 'Liquid / cash',
+            label_growth_3a: 'Pillar 3a',
+            label_growth_pk: 'Pension fund',
+            growth_rate_hint: 'Default 0% = linear projection. The PK minimum interest rate is set by law.',
+
+            pk_overflow: '{amount} of pension-fund assets exceed the {pct}% limit and do not count as equity.',
         },
         charts: {
             label_liquid: 'Liquid Assets',
