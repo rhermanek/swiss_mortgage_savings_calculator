@@ -46,6 +46,7 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
     const { t } = useLanguage()
     const [step, setStep] = useState(0)
     const [values, setValues] = useState<WizardValues>(initialValues)
+    const [personTab, setPersonTab] = useState<'1' | '2'>('1')
 
     const handleNext = () => setStep((s) => s + 1)
     const handleBack = () => setStep((s) => s - 1)
@@ -62,7 +63,11 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
     const partnerToggle = (
         <button
             type="button"
-            onClick={() => updateValue("person2Active", !values.person2Active)}
+            onClick={() => {
+                const next = !values.person2Active
+                updateValue("person2Active", next)
+                if (!next) setPersonTab('1')
+            }}
             className={`flex items-center gap-2 w-full px-4 py-3 rounded-xl border text-sm font-medium transition-colors ${
                 values.person2Active
                     ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300'
@@ -75,6 +80,32 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
                 <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${values.person2Active ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </div>
         </button>
+    )
+
+    const tabBase = 'flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors'
+    const tabActive = 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+    const tabInactive = 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+    const personTabsEl = (
+        <div role="tablist" className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800/60 p-1">
+            <button
+                type="button"
+                role="tab"
+                aria-selected={personTab === '1'}
+                onClick={() => setPersonTab('1')}
+                className={`${tabBase} ${personTab === '1' ? tabActive : tabInactive}`}
+            >
+                {t('wizard.person1_label')}
+            </button>
+            <button
+                type="button"
+                role="tab"
+                aria-selected={personTab === '2'}
+                onClick={() => setPersonTab('2')}
+                className={`${tabBase} ${personTab === '2' ? tabActive : tabInactive}`}
+            >
+                {t('wizard.partner_section')}
+            </button>
+        </div>
     )
 
     const steps = [
@@ -130,42 +161,36 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
                         {t('wizard.step_3_info')}
                     </div>
                     {partnerToggle}
-                    {values.person2Active && (
-                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                            {t('wizard.person1_label')}
-                        </div>
-                    )}
-                    <SliderInput
-                        id="wiz-bar"
-                        label={t('wizard.label_bar')}
-                        value={values.barvermoegen}
-                        onChange={(v) => updateValue("barvermoegen", v)}
-                        max={500000}
-                        step={1000}
-                    />
-                    <SliderInput
-                        id="wiz-3a"
-                        label={t('wizard.label_3a')}
-                        value={values.saeule3a}
-                        onChange={(v) => updateValue("saeule3a", v)}
-                        max={200000}
-                        step={1000}
-                    />
-                    <SliderInput
-                        id="wiz-pk"
-                        label={t('wizard.label_pk')}
-                        value={values.pensionskasse}
-                        onChange={(v) => updateValue("pensionskasse", v)}
-                        max={500000}
-                        step={1000}
-                    />
-                    {values.person2Active && (
+                    {values.person2Active && personTabsEl}
+                    {personTab === '1' || !values.person2Active ? (
                         <>
-                            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                    {t('wizard.partner_section')}
-                                </div>
-                            </div>
+                            <SliderInput
+                                id="wiz-bar"
+                                label={t('wizard.label_bar')}
+                                value={values.barvermoegen}
+                                onChange={(v) => updateValue("barvermoegen", v)}
+                                max={500000}
+                                step={1000}
+                            />
+                            <SliderInput
+                                id="wiz-3a"
+                                label={t('wizard.label_3a')}
+                                value={values.saeule3a}
+                                onChange={(v) => updateValue("saeule3a", v)}
+                                max={200000}
+                                step={1000}
+                            />
+                            <SliderInput
+                                id="wiz-pk"
+                                label={t('wizard.label_pk')}
+                                value={values.pensionskasse}
+                                onChange={(v) => updateValue("pensionskasse", v)}
+                                max={500000}
+                                step={1000}
+                            />
+                        </>
+                    ) : (
+                        <>
                             <SliderInput
                                 id="wiz-bar2"
                                 label={t('wizard.label_bar')}
@@ -203,45 +228,38 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl text-sm text-emerald-800 dark:text-emerald-200">
                         {t('wizard.step_4_info')}
                     </div>
-                    {values.person2Active && (
-                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                            {t('wizard.person1_label')}
-                        </div>
-                    )}
-                    <SliderInput
-                        id="wiz-3a-mt"
-                        label={t('wizard.label_3a_monthly')}
-                        value={values.saeule3aMonatlich}
-                        onChange={(v) => updateValue("saeule3aMonatlich", v)}
-                        max={3000}
-                        step={50}
-                    />
-                    <SliderInput
-                        id="wiz-pk-mt"
-                        label={t('wizard.label_pk_monthly')}
-                        value={values.pensionskasseMonatlich}
-                        onChange={(v) => updateValue("pensionskasseMonatlich", v)}
-                        max={5000}
-                        step={50}
-                        hint={t('wizard.hint_pk_monthly')}
-                    />
-                    <SliderInput
-                        id="wiz-other-mt"
-                        label={t('wizard.label_other_monthly')}
-                        value={values.sonstigeSparrateMonatlich}
-                        onChange={(v) => updateValue("sonstigeSparrateMonatlich", v)}
-                        max={20000}
-                        step={50}
-                        hint={t('wizard.hint_other_monthly')}
-                    />
-                    {/* Person 2 */}
-                    {values.person2Active && (
+                    {values.person2Active && personTabsEl}
+                    {personTab === '1' || !values.person2Active ? (
                         <>
-                            <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                                <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                    {t('wizard.partner_section')}
-                                </div>
-                            </div>
+                            <SliderInput
+                                id="wiz-3a-mt"
+                                label={t('wizard.label_3a_monthly')}
+                                value={values.saeule3aMonatlich}
+                                onChange={(v) => updateValue("saeule3aMonatlich", v)}
+                                max={3000}
+                                step={50}
+                            />
+                            <SliderInput
+                                id="wiz-pk-mt"
+                                label={t('wizard.label_pk_monthly')}
+                                value={values.pensionskasseMonatlich}
+                                onChange={(v) => updateValue("pensionskasseMonatlich", v)}
+                                max={5000}
+                                step={50}
+                                hint={t('wizard.hint_pk_monthly')}
+                            />
+                            <SliderInput
+                                id="wiz-other-mt"
+                                label={t('wizard.label_other_monthly')}
+                                value={values.sonstigeSparrateMonatlich}
+                                onChange={(v) => updateValue("sonstigeSparrateMonatlich", v)}
+                                max={20000}
+                                step={50}
+                                hint={t('wizard.hint_other_monthly')}
+                            />
+                        </>
+                    ) : (
+                        <>
                             <SliderInput
                                 id="wiz-3a-mt2"
                                 label={t('wizard.label_3a_monthly')}

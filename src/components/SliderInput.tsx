@@ -1,14 +1,8 @@
 import * as React from 'react'
 import * as SliderPrimitive from '@radix-ui/react-slider'
+import { SlidersHorizontal } from 'lucide-react'
 import { cn } from '../lib/utils'
-
-// Reuse logic from App.tsx or similar, but for now we'll keep it self-contained or import 
-// if I refactored the money parsing. 
-// For simplicity in this component, I'll assume props handle the mixed string/number state 
-// or I'll implement a clean interface.
-// Ideally: The parent manages state as a string (since that's what the App currently does).
-// This component will take `value` (string) and `onChange` (string).
-// It will convert to number for the slider.
+import { useLanguage } from '../i18n/useLanguage'
 
 type SliderInputProps = {
     id: string
@@ -56,26 +50,19 @@ export function SliderInput({
     icon,
     hint,
 }: SliderInputProps) {
+    const { t } = useLanguage()
+    const [showSlider, setShowSlider] = React.useState(false)
     const numericValue = React.useMemo(() => parseMoney(value), [value])
 
     const isInvalid = React.useMemo(() => {
         const trimmed = value.trim()
         if (!trimmed) return false
-        const normalized = trimmed.replaceAll('\u2019', '').replaceAll("'", '').replace(/\s/g, '')
+        const normalized = trimmed.replaceAll('’', '').replaceAll("'", '').replace(/\s/g, '')
         return !/^[0-9]+([.,][0-9]*)?$/.test(normalized)
     }, [value])
 
-    // Handlers
     const handleSliderChange = (vals: number[]) => {
-        // When slider moves, we update the string value.
-        // We might want to format it nicely? 
-        // The existing app simply holds the string. 
-        // Let's pass a clean string representation.
         const newVal = vals[0]
-        // Use a simple formatting with ' for thousands for better UX if possible,
-        // but the app's `parseMoney` handles ' so we can emit it.
-        // For now, raw number string is safest to avoid cursor jumping if we were typing, 
-        // but since this is slider drag, we can format.
         const formatted = new Intl.NumberFormat('de-CH').format(newVal).replaceAll('’', "'")
         onChange(formatted)
     }
@@ -85,40 +72,52 @@ export function SliderInput({
     }
 
     return (
-        <div className="space-y-3">
-            <div className="flex items-center justify-between">
-                <label htmlFor={id} className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                    {label}
-                </label>
-                {/* Optional: Show value on the right or rely on input */}
-            </div>
+        <div className="space-y-2">
+            <label htmlFor={id} className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                {label}
+            </label>
 
             <div className="relative">
-                <div className="relative mb-4">
-                    {icon ? (
-                        <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
-                            {icon}
-                        </div>
-                    ) : null}
-                    <input
-                        id={id}
-                        inputMode="decimal"
-                        value={value}
-                        onChange={handleInputChange}
-                        className={cn(
-                            "h-11 w-full rounded-xl border bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition",
-                            "placeholder:text-slate-400 focus:ring-4",
-                            isInvalid
-                                ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950/40"
-                                : "border-slate-200 focus:border-slate-300 focus:ring-slate-100 dark:border-slate-800 dark:focus:ring-slate-800 dark:focus:border-slate-700",
-                            "dark:bg-slate-950 dark:text-slate-100",
-                            icon ? "pl-10" : ""
-                        )}
-                    />
-                </div>
+                {icon ? (
+                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
+                        {icon}
+                    </div>
+                ) : null}
+                <input
+                    id={id}
+                    inputMode="decimal"
+                    value={value}
+                    aria-describedby={hint ? `${id}-hint` : undefined}
+                    onChange={handleInputChange}
+                    className={cn(
+                        "h-11 w-full rounded-xl border bg-white pr-10 text-[15px] text-slate-900 shadow-sm outline-none transition",
+                        "placeholder:text-slate-400 focus:ring-4",
+                        isInvalid
+                            ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950/40"
+                            : "border-slate-200 focus:border-slate-300 focus:ring-slate-100 dark:border-slate-800 dark:focus:ring-slate-800 dark:focus:border-slate-700",
+                        "dark:bg-slate-950 dark:text-slate-100",
+                        icon ? "pl-10" : "pl-3",
+                    )}
+                />
+                <button
+                    type="button"
+                    onClick={() => setShowSlider((s) => !s)}
+                    aria-label={t('app.toggle_slider')}
+                    aria-expanded={showSlider}
+                    aria-controls={`${id}-slider`}
+                    className={cn(
+                        "absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 transition-colors",
+                        showSlider
+                            ? "text-slate-700 bg-slate-100 dark:text-slate-200 dark:bg-slate-800"
+                            : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800",
+                    )}
+                >
+                    <SlidersHorizontal className="h-4 w-4" />
+                </button>
+            </div>
 
-                {/* Slider */}
-                <div className="px-1">
+            {showSlider && (
+                <div id={`${id}-slider`} className="px-1 pt-2">
                     <SliderPrimitive.Root
                         className="relative flex w-full touch-none select-none items-center"
                         value={[numericValue]}
@@ -130,12 +129,16 @@ export function SliderInput({
                         <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                             <SliderPrimitive.Range className="absolute h-full bg-slate-900 dark:bg-slate-50" />
                         </SliderPrimitive.Track>
-                        <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-slate-900 bg-white ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-50 dark:bg-slate-950 dark:ring-offset-slate-950 dark:focus-visible:ring-slate-300 shadow-sm cursor-grab active:cursor-grabbing" />
+                        <SliderPrimitive.Thumb
+                            aria-label={label}
+                            className="block h-6 w-6 rounded-full border-2 border-slate-900 bg-white ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-50 dark:bg-slate-950 dark:ring-offset-slate-950 dark:focus-visible:ring-slate-300 shadow-sm cursor-grab active:cursor-grabbing"
+                        />
                     </SliderPrimitive.Root>
                 </div>
-            </div>
-            {isInvalid && <div className="text-xs text-rose-500 dark:text-rose-400 mt-1.5">Ungültiger Wert / Invalid value</div>}
-            {hint ? <div className="text-xs text-slate-500 mt-1.5">{hint}</div> : null}
+            )}
+
+            {isInvalid && <div className="text-xs text-rose-500 dark:text-rose-400">{t('app.input_error')}</div>}
+            {hint ? <div id={`${id}-hint`} className="text-xs text-slate-500 dark:text-slate-400">{hint}</div> : null}
         </div>
     )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
+  Check,
   Coins,
   Info,
   Landmark,
@@ -11,7 +12,6 @@ import {
   Wand2,
 } from 'lucide-react'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
-import { DonutChart } from './components/DonutChart'
 import { GrowthChart } from './components/GrowthChart'
 import { MonthPicker } from './components/MonthPicker'
 import { SliderInput } from './components/SliderInput'
@@ -125,6 +125,42 @@ function Label(props: React.PropsWithChildren<{ htmlFor: string }>) {
   )
 }
 
+function PersonTabs({
+  personTab,
+  setPersonTab,
+  t,
+}: {
+  personTab: '1' | '2'
+  setPersonTab: (v: '1' | '2') => void
+  t: (key: string, params?: Record<string, string | number>) => string
+}) {
+  const base = 'flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors'
+  const active = 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
+  const inactive = 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+  return (
+    <div role="tablist" className="flex flex-1 items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800/60 p-1">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={personTab === '1'}
+        onClick={() => setPersonTab('1')}
+        className={cx(base, personTab === '1' ? active : inactive)}
+      >
+        {t('app.person1_section')}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={personTab === '2'}
+        onClick={() => setPersonTab('2')}
+        className={cx(base, personTab === '2' ? active : inactive)}
+      >
+        {t('app.person2_section')}
+      </button>
+    </div>
+  )
+}
+
 function Pill({
   tone,
   children,
@@ -148,7 +184,7 @@ function Pill({
 }
 
 function AppContent() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   // helper hook for local storage persistence
   function usePersistentState(key: string, initialValue: string) {
@@ -191,6 +227,7 @@ function AppContent() {
 
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [confirmRemovePartner, setConfirmRemovePartner] = useState(false)
+  const [personTab, setPersonTab] = useState<'1' | '2'>('1')
 
   const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich', '500')
   const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich', '0')
@@ -320,72 +357,93 @@ function AppContent() {
   const showHardWarning = totalRuleMet && !hardRuleMet
   const invalidDate = priceValid && savingsGap > 0 && monthsRemaining <= 0
 
+  const targetDateLabel = useMemo(() => {
+    if (!zielMonat) return ''
+    const [yyyyStr, mmStr] = zielMonat.split('-')
+    const yyyy = Number(yyyyStr)
+    const mm = Number(mmStr)
+    if (!Number.isFinite(yyyy) || !Number.isFinite(mm)) return ''
+    return new Date(yyyy, mm - 1, 1).toLocaleDateString(
+      language === 'de' ? 'de-CH' : 'en-US',
+      { month: 'long', year: 'numeric' },
+    )
+  }, [language, zielMonat])
+
+  // Progress bar segments (capped at totalRequired)
+  const hardCapped = Math.min(hardAssetsAtTarget, totalRequired)
+  const softRemaining = Math.max(0, totalRequired - hardCapped)
+  const softCapped = Math.min(pkProjected, softRemaining)
+  const gapDisplay = Math.max(0, totalRequired - hardCapped - softCapped)
+  const pct = (n: number) => (totalRequired > 0 ? (n / totalRequired) * 100 : 0)
+
+  // Today's totals (sum of person 1 + 2 current values, before projection)
+  const todayHardTotal = barN + barN2 + s3aN + s3aN2 + otherN + otherN2
+  const todaySoftTotal = pkN + pkN2
+  const todayTotal = todayHardTotal + todaySoftTotal
+  const todayPct = totalRequired > 0 ? Math.min(100, (todayTotal / totalRequired) * 100) : 0
+
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <div className="min-h-screen pb-20 font-sans text-slate-900 bg-slate-50 dark:bg-slate-950 dark:text-slate-50 transition-colors duration-300">
-        <div className="mx-auto w-full max-w-6xl px-4 py-10">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between mb-8 gap-6">
-            <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left w-full">
-              <img src={logoUrl} alt="Logo" className="h-24 sm:h-32 w-auto shrink-0 drop-shadow-[0_5px_5px_rgba(0,0,0,0.4)]" />
-              <div className="flex flex-col gap-2 w-full">
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                  <h1 className="text-balance text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-4xl">
-                    {t('app.title')}
-                  </h1>
-                  <div className="flex items-center gap-1">
-                    <Pill tone="info">
-                      <Landmark className="h-4 w-4 shrink-0" />
-                      <span className="text-left">{t('app.badge_rules')}</span>
-                    </Pill>
-                    <PopoverPrimitive.Root>
-                      <PopoverPrimitive.Trigger asChild>
-                        <button
-                          aria-label={t('app.info_rules_title')}
-                          className="rounded-full p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                        </button>
-                      </PopoverPrimitive.Trigger>
-                      <PopoverPrimitive.Portal>
-                        <PopoverPrimitive.Content
-                          side="bottom"
-                          align="start"
-                          sideOffset={6}
-                          className="z-50 max-w-xs rounded-xl border border-slate-200 bg-white p-4 shadow-xl outline-none dark:bg-slate-900 dark:border-slate-800"
-                        >
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 text-sm">{t('app.info_rules_title')}</h3>
-                          <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
-                            <div>
-                              <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_20pct')}</div>
-                              <div>{t('app.info_rules_20pct_desc')}</div>
-                            </div>
-                            <div>
-                              <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_10pct')}</div>
-                              <div>{t('app.info_rules_10pct_desc')}</div>
-                            </div>
-                            <div>
-                              <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_soft')}</div>
-                              <div>{t('app.info_rules_soft_desc')}</div>
-                            </div>
+        <div className="mx-auto w-full max-w-7xl px-4 py-10">
+          <div className="mb-6 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <img src={logoUrl} alt="" className="h-10 sm:h-12 w-auto shrink-0 drop-shadow-[0_2px_3px_rgba(0,0,0,0.25)]" />
+              <div className="flex flex-col min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50 leading-tight">
+                  {t('app.title')}
+                </h1>
+                <div className="flex items-center gap-1">
+                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                    <Landmark className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t('app.badge_rules')}</span>
+                  </span>
+                  <PopoverPrimitive.Root>
+                    <PopoverPrimitive.Trigger asChild>
+                      <button
+                        aria-label={t('app.info_rules_title')}
+                        className="rounded-full p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                    </PopoverPrimitive.Trigger>
+                    <PopoverPrimitive.Portal>
+                      <PopoverPrimitive.Content
+                        side="bottom"
+                        align="start"
+                        sideOffset={6}
+                        className="z-50 max-w-xs rounded-xl border border-slate-200 bg-white p-4 shadow-xl outline-none dark:bg-slate-900 dark:border-slate-800"
+                      >
+                        <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 text-sm">{t('app.info_rules_title')}</h3>
+                        <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
+                          <div>
+                            <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_20pct')}</div>
+                            <div>{t('app.info_rules_20pct_desc')}</div>
                           </div>
-                          <PopoverPrimitive.Arrow className="fill-white dark:fill-slate-900" />
-                        </PopoverPrimitive.Content>
-                      </PopoverPrimitive.Portal>
-                    </PopoverPrimitive.Root>
-                  </div>
+                          <div>
+                            <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_10pct')}</div>
+                            <div>{t('app.info_rules_10pct_desc')}</div>
+                          </div>
+                          <div>
+                            <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_soft')}</div>
+                            <div>{t('app.info_rules_soft_desc')}</div>
+                          </div>
+                        </div>
+                        <PopoverPrimitive.Arrow className="fill-white dark:fill-slate-900" />
+                      </PopoverPrimitive.Content>
+                    </PopoverPrimitive.Portal>
+                  </PopoverPrimitive.Root>
                 </div>
-                <p className="max-w-3xl text-lg text-slate-600 dark:text-slate-400">
-                  {t('app.subtitle')}
-                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setIsWizardOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 hover:scale-105 transition-all whitespace-nowrap"
+                aria-label={t('app.btn_wizard')}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all whitespace-nowrap"
               >
                 <Wand2 className="w-4 h-4" />
-                {t('app.btn_wizard')}
+                <span className="hidden sm:inline">{t('app.btn_wizard')}</span>
               </button>
               <LanguageSwitcher />
               <ThemeToggle />
@@ -467,7 +525,7 @@ function AppContent() {
                     </div>
                     {!person2Active && (
                       <button
-                        onClick={() => setPerson2Active(true)}
+                        onClick={() => { setPerson2Active(true); setPersonTab('2') }}
                         className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                       >
                         <UserPlus className="h-3.5 w-3.5" />
@@ -478,80 +536,80 @@ function AppContent() {
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {person2Active && (
-                    <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      {t('app.person1_section')}
+                    <div className="flex items-center gap-2">
+                      <PersonTabs personTab={personTab} setPersonTab={setPersonTab} t={t} />
+                      {confirmRemovePartner ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => { setPerson2Active(false); setConfirmRemovePartner(false); setPersonTab('1') }}
+                            className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/60 transition-colors"
+                            title={t('app.confirm_remove_partner')}
+                          >
+                            {t('app.confirm_yes')}
+                          </button>
+                          <button
+                            onClick={() => setConfirmRemovePartner(false)}
+                            className="rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                          >
+                            {t('app.confirm_cancel')}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmRemovePartner(true)}
+                          aria-label={t('app.remove_partner_btn')}
+                          title={t('app.remove_partner_btn')}
+                          className="shrink-0 rounded-lg border border-rose-200 dark:border-rose-900 p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                        >
+                          <UserMinus className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   )}
-                  <SliderInput
-                    id="barvermoegen"
-                    label={t('app.label_bar')}
-                    value={barvermoegen}
-                    onChange={setBarvermoegen}
-                    max={500000}
-                    step={1000}
-                    icon={<Wallet className="h-4 w-4" />}
-                  />
-                  <SliderInput
-                    id="saeule3a"
-                    label={t('app.label_3a')}
-                    value={saeule3a}
-                    onChange={setSaeule3a}
-                    max={200000}
-                    step={1000}
-                    icon={<PiggyBank className="h-4 w-4" />}
-                  />
-                  <SliderInput
-                    id="pensionskasse"
-                    label={t('app.label_pk')}
-                    value={pensionskasse}
-                    onChange={setPensionskasse}
-                    max={500000}
-                    step={1000}
-                    hint={t('app.hint_pk')}
-                    icon={<Landmark className="h-4 w-4" />}
-                  />
-                  <SliderInput
-                    id="andere"
-                    label={t('app.label_other')}
-                    value={andereVermoegen}
-                    onChange={setAndereVermoegen}
-                    max={200000}
-                    step={1000}
-                    hint={t('app.hint_other')}
-                    icon={<Coins className="h-4 w-4" />}
-                  />
-                  {person2Active && (
+
+                  {personTab === '1' || !person2Active ? (
                     <>
-                      <div className="flex items-center gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-1">
-                          {t('app.person2_section')}
-                        </div>
-                        {confirmRemovePartner ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-rose-600 dark:text-rose-400 font-medium">{t('app.confirm_remove_partner')}</span>
-                            <button
-                              onClick={() => { setPerson2Active(false); setConfirmRemovePartner(false) }}
-                              className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/60 transition-colors"
-                            >
-                              {t('app.confirm_yes')}
-                            </button>
-                            <button
-                              onClick={() => setConfirmRemovePartner(false)}
-                              className="rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                            >
-                              {t('app.confirm_cancel')}
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setConfirmRemovePartner(true)}
-                            className="flex items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                          >
-                            <UserMinus className="h-3.5 w-3.5" />
-                            {t('app.remove_partner_btn')}
-                          </button>
-                        )}
-                      </div>
+                      <SliderInput
+                        id="barvermoegen"
+                        label={t('app.label_bar')}
+                        value={barvermoegen}
+                        onChange={setBarvermoegen}
+                        max={500000}
+                        step={1000}
+                        icon={<Wallet className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="saeule3a"
+                        label={t('app.label_3a')}
+                        value={saeule3a}
+                        onChange={setSaeule3a}
+                        max={200000}
+                        step={1000}
+                        icon={<PiggyBank className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="pensionskasse"
+                        label={t('app.label_pk')}
+                        value={pensionskasse}
+                        onChange={setPensionskasse}
+                        max={500000}
+                        step={1000}
+                        hint={t('app.hint_pk')}
+                        icon={<Landmark className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="andere"
+                        label={t('app.label_other')}
+                        value={andereVermoegen}
+                        onChange={setAndereVermoegen}
+                        max={200000}
+                        step={1000}
+                        hint={t('app.hint_other')}
+                        icon={<Coins className="h-4 w-4" />}
+                      />
+                    </>
+                  ) : (
+                    <>
                       <SliderInput
                         id="barvermoegen2"
                         label={t('app.label_bar')}
@@ -604,46 +662,42 @@ function AppContent() {
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {person2Active && (
-                    <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                      {t('app.person1_section')}
-                    </div>
+                    <PersonTabs personTab={personTab} setPersonTab={setPersonTab} t={t} />
                   )}
-                  <SliderInput
-                    id="saeule3aMonatlich"
-                    label={t('app.label_3a_monthly')}
-                    value={saeule3aMonatlich}
-                    onChange={setSaeule3aMonatlich}
-                    max={3000}
-                    step={50}
-                    icon={<PiggyBank className="h-4 w-4" />}
-                  />
-                  <SliderInput
-                    id="pensionskasseMonatlich"
-                    label={t('app.label_pk_monthly')}
-                    value={pensionskasseMonatlich}
-                    onChange={setPensionskasseMonatlich}
-                    max={5000}
-                    step={50}
-                    hint={t('app.hint_pk_monthly')}
-                    icon={<Landmark className="h-4 w-4" />}
-                  />
-                  <SliderInput
-                    id="sonstigeSparrateMonatlich"
-                    label={t('app.label_other_monthly')}
-                    value={sonstigeSparrateMonatlich}
-                    onChange={setSonstigeSparrateMonatlich}
-                    max={20000}
-                    step={50}
-                    hint={t('app.hint_other_monthly')}
-                    icon={<Wallet className="h-4 w-4" />}
-                  />
-                  {person2Active && (
+                  {personTab === '1' || !person2Active ? (
                     <>
-                      <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                          {t('app.person2_section')}
-                        </div>
-                      </div>
+                      <SliderInput
+                        id="saeule3aMonatlich"
+                        label={t('app.label_3a_monthly')}
+                        value={saeule3aMonatlich}
+                        onChange={setSaeule3aMonatlich}
+                        max={3000}
+                        step={50}
+                        icon={<PiggyBank className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="pensionskasseMonatlich"
+                        label={t('app.label_pk_monthly')}
+                        value={pensionskasseMonatlich}
+                        onChange={setPensionskasseMonatlich}
+                        max={5000}
+                        step={50}
+                        hint={t('app.hint_pk_monthly')}
+                        icon={<Landmark className="h-4 w-4" />}
+                      />
+                      <SliderInput
+                        id="sonstigeSparrateMonatlich"
+                        label={t('app.label_other_monthly')}
+                        value={sonstigeSparrateMonatlich}
+                        onChange={setSonstigeSparrateMonatlich}
+                        max={20000}
+                        step={50}
+                        hint={t('app.hint_other_monthly')}
+                        icon={<Wallet className="h-4 w-4" />}
+                      />
+                    </>
+                  ) : (
+                    <>
                       <SliderInput
                         id="saeule3aMonatlich2"
                         label={t('app.label_3a_monthly')}
@@ -680,7 +734,7 @@ function AppContent() {
             </div>
 
             {/* Right Column: Analysis */}
-            <div className="space-y-8">
+            <div className="space-y-8 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 lg:pb-4">
               <Card className="overflow-hidden border-slate-200 dark:border-slate-800 dark:bg-slate-900">
                 <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-800">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -700,85 +754,132 @@ function AppContent() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-8">
-                  {/* Donut Chart Visualization */}
-                  <div className="flex flex-col items-center">
-                    <DonutChart
-                      hardEquity={hardAssetsAtTarget}
-                      softEquity={pkProjected}
-                      gap={savingsGap}
-                      target={totalRequired}
-                    />
-                    <div className="mt-6 w-full space-y-3">
-                      {/* Hard equity row */}
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
-                        <div className="h-3 w-3 shrink-0 rounded-full bg-emerald-500" />
-                        <span className="flex-1">{t('app.chart_hard')}</span>
-                        {person2Active ? (
-                          <div className="flex gap-3 tabular-nums">
-                            <span className="text-slate-500 dark:text-slate-400">
-                              {t('app.person1_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(hardP1AtTarget, { decimals: 0 })}</span>
-                            </span>
-                            <span className="text-slate-400 dark:text-slate-600">·</span>
-                            <span className="text-slate-500 dark:text-slate-400">
-                              {t('app.person2_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(hardP2AtTarget, { decimals: 0 })}</span>
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="tabular-nums font-semibold text-slate-700 dark:text-slate-200">{formatCHF(hardAssetsAtTarget, { decimals: 0 })}</span>
+                <CardContent className="space-y-7">
+                  {/* Hero result */}
+                  <div className="text-center">
+                    {!priceValid ? (
+                      <>
+                        <div className="text-5xl font-bold tracking-tight text-slate-300 dark:text-slate-700">—</div>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                          {t('app.hero_no_price')}
+                        </p>
+                      </>
+                    ) : savingsGap <= 0 ? (
+                      <>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                          <Check className="h-4 w-4" />
+                          {t('app.hero_goal_reached')}
+                        </div>
+                        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                          {t('app.hero_goal_reached_desc', { date: targetDateLabel })}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-5xl sm:text-6xl font-bold tracking-tight text-slate-900 dark:text-slate-50 tabular-nums">
+                          {Number.isFinite(monthlySavingsTarget) ? formatCHF(roundTo2(monthlySavingsTarget)) : '—'}
+                          <span className="ml-2 text-xl font-medium text-slate-500 dark:text-slate-400">{t('app.summary_per_month')}</span>
+                        </div>
+                        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
+                          {t('app.hero_subtitle', { date: targetDateLabel })}
+                        </p>
+                        {invalidDate && (
+                          <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">{t('app.summary_error_date')}</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Progress bar to goal */}
+                  {priceValid && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                        <span>0</span>
+                        <span className="tabular-nums font-medium text-slate-700 dark:text-slate-300">
+                          {Math.round(totalProgress * 100)}% · {formatCHF(totalAssetsAtTarget, { decimals: 0 })} / {formatCHF(totalRequired, { decimals: 0 })}
+                        </span>
+                      </div>
+                      <div className="relative h-6 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div className="flex h-full">
+                          <div
+                            className="h-full bg-emerald-500 transition-all"
+                            style={{ width: `${pct(hardCapped)}%` }}
+                            title={`${t('app.chart_hard')}: ${formatCHF(hardCapped, { decimals: 0 })}`}
+                          />
+                          <div
+                            className="h-full bg-blue-500 transition-all"
+                            style={{ width: `${pct(softCapped)}%` }}
+                            title={`${t('app.chart_pk')}: ${formatCHF(softCapped, { decimals: 0 })}`}
+                          />
+                          <div
+                            className="h-full bg-slate-300 dark:bg-slate-600 transition-all"
+                            style={{ width: `${pct(gapDisplay)}%` }}
+                            title={`${t('app.chart_gap')}: ${formatCHF(gapDisplay, { decimals: 0 })}`}
+                          />
+                        </div>
+                        {/* 50% marker (10% hard hurdle) */}
+                        <div
+                          className="pointer-events-none absolute top-0 h-full w-px bg-slate-700/40 dark:bg-slate-200/40"
+                          style={{ left: '50%' }}
+                          title={t('app.progress_marker_hard')}
+                        />
+                        {/* "Today" tick */}
+                        {todayPct > 0 && todayPct < 100 && (
+                          <div
+                            className="pointer-events-none absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-slate-900 dark:bg-slate-50"
+                            style={{ left: `calc(${todayPct}% - 1px)` }}
+                            title={`${t('app.progress_today')}: ${formatCHF(todayTotal, { decimals: 0 })}`}
+                          />
                         )}
                       </div>
-                      {/* Pension row */}
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
-                        <div className="h-3 w-3 shrink-0 rounded-full bg-blue-500" />
-                        <span className="flex-1">{t('app.chart_pk')}</span>
-                        {person2Active ? (
-                          <div className="flex gap-3 tabular-nums">
-                            <span className="text-slate-500 dark:text-slate-400">
-                              {t('app.person1_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(pkProjected1, { decimals: 0 })}</span>
-                            </span>
-                            <span className="text-slate-400 dark:text-slate-600">·</span>
-                            <span className="text-slate-500 dark:text-slate-400">
-                              {t('app.person2_section')}: <span className="font-semibold text-slate-700 dark:text-slate-200">{formatCHF(pkProjected2, { decimals: 0 })}</span>
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="tabular-nums font-semibold text-slate-700 dark:text-slate-200">{formatCHF(pkProjected, { decimals: 0 })}</span>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                          {t('app.chart_hard')}
+                          <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(hardAssetsAtTarget, { decimals: 0 })}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-blue-500" />
+                          {t('app.chart_pk')}
+                          <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(pkProjected, { decimals: 0 })}</span>
+                        </span>
+                        {savingsGap > 0 && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />
+                            {t('app.chart_gap')}
+                            <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(savingsGap, { decimals: 0 })}</span>
+                          </span>
                         )}
+                        <span className="ml-auto inline-flex items-center gap-1.5">
+                          <span className="h-2 w-0.5 rounded bg-slate-900 dark:bg-slate-50" />
+                          {t('app.progress_today')}
+                          <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(todayTotal, { decimals: 0 })}</span>
+                        </span>
                       </div>
-                      {/* Gap row */}
-                      {savingsGap > 0 && (
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-400">
-                          <div className="h-3 w-3 shrink-0 rounded-full bg-slate-300 dark:bg-slate-600" />
-                          <span className="flex-1">{t('app.chart_gap')}</span>
-                          <span className="tabular-nums font-semibold text-slate-700 dark:text-slate-200">{formatCHF(savingsGap, { decimals: 0 })}</span>
+                      {person2Active && (
+                        <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          <div className="flex justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-slate-800/50">
+                            <span>{t('app.person1_section')}</span>
+                            <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatCHF(hardP1AtTarget + pkProjected1, { decimals: 0 })}</span>
+                          </div>
+                          <div className="flex justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-slate-800/50">
+                            <span>{t('app.person2_section')}</span>
+                            <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatCHF(hardP2AtTarget + pkProjected2, { decimals: 0 })}</span>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800">
-                    {/* Summary Boxes */}
-                    <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-6 text-center">
-                      <div className="text-sm text-slate-500 dark:text-slate-400 mb-1">{t('app.summary_rec_savings')}</div>
-                      <div className="text-4xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-                        {Number.isFinite(monthlySavingsTarget) ? formatCHF(roundTo2(monthlySavingsTarget)) : '—'}
-                        <span className="text-lg font-medium text-slate-500 dark:text-slate-400 ml-1">{t('app.summary_per_month')}</span>
+                  {showHardWarning && (
+                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200 border border-amber-100 dark:border-amber-900/50">
+                      <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
+                      <div>
+                        <span className="font-semibold block mb-1">{t('app.warning_hard_title')}</span>
+                        {t('app.warning_hard_desc', { amount: formatCHF(hardShortfallAtTarget) })}
                       </div>
-                      {!priceValid && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">{t('app.summary_error_price')}</div>}
-                      {invalidDate && <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">{t('app.summary_error_date')}</div>}
                     </div>
-
-                    {showHardWarning && (
-                      <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200 border border-amber-100 dark:border-amber-900/50">
-                        <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
-                        <div>
-                          <span className="font-semibold block mb-1">{t('app.warning_hard_title')}</span>
-                          {t('app.warning_hard_desc', { amount: formatCHF(hardShortfallAtTarget) })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -808,6 +909,7 @@ function AppContent() {
                     } : {})}
                     months={monthsRemaining + 12}
                     targetAmount={totalRequired}
+                    targetMonthIndex={monthsRemaining}
                   />
                   <div className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
                     {t('app.growth_note')}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { cn } from '../lib/utils'
 import { useLanguage } from '../i18n/useLanguage'
 
@@ -18,6 +18,7 @@ type GrowthChartProps = {
     monthlyPKContribution2?: number
     months: number
     targetAmount: number
+    targetMonthIndex?: number
     className?: string
 }
 
@@ -139,6 +140,8 @@ export function GrowthChart({
     currentPKAssets2,
     monthlyPKContribution2,
     months,
+    targetAmount,
+    targetMonthIndex,
     className,
 }: GrowthChartProps) {
     const { t, language } = useLanguage()
@@ -320,6 +323,37 @@ export function GrowthChart({
                             name={key}
                         />
                     ))}
+                    {targetAmount > 0 && (
+                        <ReferenceLine
+                            y={targetAmount}
+                            stroke="#ef4444"
+                            strokeDasharray="4 4"
+                            strokeWidth={1.5}
+                            ifOverflow="extendDomain"
+                            label={{
+                                value: `${t('charts.label_target')} ${new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US', { notation: 'compact' }).format(targetAmount)}`,
+                                position: 'insideTopLeft',
+                                fill: '#ef4444',
+                                fontSize: 11,
+                                fontWeight: 600,
+                            }}
+                        />
+                    )}
+                    {targetMonthIndex !== undefined && targetMonthIndex >= 0 && targetMonthIndex < data.length && (
+                        <ReferenceLine
+                            x={data[targetMonthIndex].name as string}
+                            stroke="#94a3b8"
+                            strokeDasharray="3 3"
+                            strokeWidth={1.5}
+                            label={{
+                                value: t('charts.label_target_month'),
+                                position: 'insideTopRight',
+                                fill: '#64748b',
+                                fontSize: 11,
+                                fontWeight: 500,
+                            }}
+                        />
+                    )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>

@@ -44,6 +44,18 @@ export const translations = {
             summary_error_price: 'Bitte Kaufpreis eingeben',
             summary_error_date: 'Bitte Zieldatum anpassen',
 
+            hero_subtitle: 'Sparrate, um bis {date} die 20 %-Hürde zu erreichen',
+            hero_goal_reached: 'Ziel erreicht',
+            hero_goal_reached_desc: 'Sie haben bis {date} genug Eigenmittel.',
+            hero_no_price: 'Geben Sie einen Kaufpreis ein, um Ihre Sparrate zu sehen.',
+
+            progress_today: 'Heute',
+            progress_at_target: 'Bei Kaufdatum',
+            progress_required: 'Benötigt',
+            progress_marker_hard: '10 %-Hürde (hart)',
+            progress_marker_total: '20 %-Ziel',
+            progress_details: 'Aufschlüsselung',
+
             warning_hard_title: '10% harte Eigenmittel nicht gedeckt',
             warning_hard_desc: 'Sie haben zwar genug Gesamtvermögen, aber zu viel davon liegt in der Pensionskasse. Sie benötigen noch {amount} aus flüssigen Mitteln.',
 
@@ -72,6 +84,7 @@ export const translations = {
             info_rules_soft_desc: 'Pensionskassenguthaben (2. Säule) zählt nur als weiches Eigenkapital und darf die 10%-Hürde nicht allein decken.',
 
             input_error: 'Ungültiger Wert',
+            toggle_slider: 'Schieberegler ein-/ausblenden',
         },
         charts: {
             label_liquid: 'Liquide Mittel',
@@ -85,6 +98,8 @@ export const translations = {
             donut_empty: 'Kaufpreis eingeben, um die Auswertung zu sehen',
             label_person1: 'Person 1',
             label_person2: 'Partner',
+            label_target: 'Ziel',
+            label_target_month: 'Kaufdatum',
         },
         wizard: {
             step_1_title: 'Willkommen',
@@ -171,6 +186,18 @@ export const translations = {
             summary_error_price: 'Please enter purchase price',
             summary_error_date: 'Please adjust target date',
 
+            hero_subtitle: 'Savings rate to clear the 20 % hurdle by {date}',
+            hero_goal_reached: 'Goal reached',
+            hero_goal_reached_desc: 'You will have enough equity by {date}.',
+            hero_no_price: 'Enter a purchase price to see your savings rate.',
+
+            progress_today: 'Today',
+            progress_at_target: 'At purchase date',
+            progress_required: 'Required',
+            progress_marker_hard: '10 % hard hurdle',
+            progress_marker_total: '20 % goal',
+            progress_details: 'Breakdown',
+
             warning_hard_title: '10% hard equity not covered',
             warning_hard_desc: 'You have enough total assets, but too much is in the pension fund. You still need {amount} from liquid funds.',
 
@@ -199,6 +226,7 @@ export const translations = {
             info_rules_soft_desc: 'Pension fund assets (2nd Pillar) count only as soft equity and cannot fulfill the 10% hard equity requirement alone.',
 
             input_error: 'Invalid value',
+            toggle_slider: 'Toggle slider',
         },
         charts: {
             label_liquid: 'Liquid Assets',
@@ -212,6 +240,8 @@ export const translations = {
             donut_empty: 'Enter a purchase price to see the analysis',
             label_person1: 'Person 1',
             label_person2: 'Partner',
+            label_target: 'Goal',
+            label_target_month: 'Purchase date',
         },
         wizard: {
             step_1_title: 'Welcome',
