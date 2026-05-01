@@ -30,7 +30,7 @@ export const translations = {
             hint_other_monthly: 'zusätzliche monatliche Ersparnisse ausserhalb von 3a und Pensionskasse',
 
             card_analysis_title: 'Ziel-Erreichung',
-            label_20pct: '20% Eigenmittel',
+            label_20pct: '{pct} % Eigenmittel',
             status_enter_price: 'Kaufpreis eingeben',
             status_goal_reached: 'Ziel erreicht',
             status_n_reached: 'erreicht',
@@ -44,7 +44,7 @@ export const translations = {
             summary_error_price: 'Bitte Kaufpreis eingeben',
             summary_error_date: 'Bitte Zieldatum anpassen',
 
-            hero_subtitle: 'Sparrate, um bis {date} die 20 %-Hürde zu erreichen',
+            hero_subtitle: 'Sparrate, um bis {date} die {pct} %-Hürde zu erreichen',
             hero_goal_reached: 'Ziel erreicht',
             hero_goal_reached_desc: 'Sie haben bis {date} genug Eigenmittel.',
             hero_no_price: 'Geben Sie einen Kaufpreis ein, um Ihre Sparrate zu sehen.',
@@ -105,7 +105,22 @@ export const translations = {
             tragbarkeit_breakdown_maintenance: 'Unterhalt + Nebenkosten (1 %)',
             tragbarkeit_breakdown_total: 'Total Wohnkosten',
             tragbarkeit_assumptions_title: 'Annahmen',
-            tragbarkeit_assumptions_desc: 'Banken rechnen mit einem kalkulatorischen Zinssatz von 5 %. Hypothek = 80 % vom Kaufpreis. Amortisation linear bis 65 % Belehnung über 15 Jahre.',
+            tragbarkeit_assumptions_desc: 'Banken rechnen mit einem kalkulatorischen Zinssatz von 5 %. Hypothek = (100 % − Eigenkapital) vom Kaufpreis. Amortisation linear bis 65 % Belehnung über 15 Jahre.',
+
+            label_equity_pct: 'Eigenkapital-Anteil',
+            hint_equity_pct: 'Standard: 20 %. Hypothek = Rest.',
+            label_soft_pct: 'Davon weiches Eigenkapital (PK)',
+            hint_soft_pct: 'Max. die Hälfte vom Eigenkapital. Default: 10 %.',
+            label_growth_rate: 'Erwartete Rendite p.a.',
+            hint_growth_rate: 'Wird auf alle Vermögenswerte angewendet. 0 % = lineare Hochrechnung.',
+
+            warning_3a_cap: 'Säule 3a-Maximum {cap}/Jahr (mit PK). Aktuell {current}/Jahr.',
+
+            info_wef_title: 'WEF: Vorbezug aus der Pensionskasse',
+            info_wef_text: 'Bezug für Wohneigentum: alle 5 Jahre möglich. Ab Alter 50 begrenzt auf den höheren Wert von (a) Freizügigkeitsleistung im Alter 50 oder (b) der Hälfte des aktuellen Guthabens.',
+
+            card_assumptions_title: 'Annahmen',
+            card_assumptions_desc: 'Eigenkapital-Aufteilung und Rendite',
         },
         charts: {
             label_liquid: 'Liquide Mittel',
@@ -193,7 +208,7 @@ export const translations = {
             hint_other_monthly: 'additional monthly savings outside Pillar 3a and the pension fund',
 
             card_analysis_title: 'Goal Achievement',
-            label_20pct: '20% Equity',
+            label_20pct: '{pct}% Equity',
             status_enter_price: 'Enter Price',
             status_goal_reached: 'Goal Reached',
             status_n_reached: 'reached',
@@ -207,7 +222,7 @@ export const translations = {
             summary_error_price: 'Please enter purchase price',
             summary_error_date: 'Please adjust target date',
 
-            hero_subtitle: 'Savings rate to clear the 20 % hurdle by {date}',
+            hero_subtitle: 'Savings rate to clear the {pct}% hurdle by {date}',
             hero_goal_reached: 'Goal reached',
             hero_goal_reached_desc: 'You will have enough equity by {date}.',
             hero_no_price: 'Enter a purchase price to see your savings rate.',
@@ -268,7 +283,22 @@ export const translations = {
             tragbarkeit_breakdown_maintenance: 'Maintenance + ancillary (1%)',
             tragbarkeit_breakdown_total: 'Total housing cost',
             tragbarkeit_assumptions_title: 'Assumptions',
-            tragbarkeit_assumptions_desc: 'Banks use an imputed interest rate of 5%. Mortgage = 80% of purchase price. Amortization linear to 65% LTV over 15 years.',
+            tragbarkeit_assumptions_desc: 'Banks use an imputed interest rate of 5%. Mortgage = (100% − equity) of purchase price. Amortization linear to 65% LTV over 15 years.',
+
+            label_equity_pct: 'Equity share',
+            hint_equity_pct: 'Default: 20%. Mortgage = the rest.',
+            label_soft_pct: 'Of which soft equity (PK)',
+            hint_soft_pct: 'Max half of equity. Default: 10%.',
+            label_growth_rate: 'Expected return p.a.',
+            hint_growth_rate: 'Applied to all asset classes. 0% = linear projection.',
+
+            warning_3a_cap: 'Pillar 3a annual cap {cap}/yr (with PK). Currently {current}/yr.',
+
+            info_wef_title: 'WEF: Pension-fund withdrawal',
+            info_wef_text: 'Withdrawal for primary residence: allowed every 5 years. From age 50, limited to the higher of (a) the vested benefit at age 50 or (b) half the current balance.',
+
+            card_assumptions_title: 'Assumptions',
+            card_assumptions_desc: 'Equity split and expected return',
         },
         charts: {
             label_liquid: 'Liquid Assets',

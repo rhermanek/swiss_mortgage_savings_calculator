@@ -14,6 +14,8 @@ type SliderInputProps = {
     step?: number
     icon?: React.ReactNode
     hint?: string
+    warning?: string
+    suffix?: string
 }
 
 function parseMoney(raw: string): number {
@@ -49,6 +51,8 @@ export function SliderInput({
     step = 1000,
     icon,
     hint,
+    warning,
+    suffix,
 }: SliderInputProps) {
     const { t } = useLanguage()
     const [showSlider, setShowSlider] = React.useState(false)
@@ -90,15 +94,21 @@ export function SliderInput({
                     aria-describedby={hint ? `${id}-hint` : undefined}
                     onChange={handleInputChange}
                     className={cn(
-                        "h-11 w-full rounded-xl border bg-white pr-10 text-[15px] text-slate-900 shadow-sm outline-none transition",
+                        "h-11 w-full rounded-xl border bg-white text-[15px] text-slate-900 shadow-sm outline-none transition",
                         "placeholder:text-slate-400 focus:ring-4",
                         isInvalid
                             ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950/40"
                             : "border-slate-200 focus:border-slate-300 focus:ring-slate-100 dark:border-slate-800 dark:focus:ring-slate-800 dark:focus:border-slate-700",
                         "dark:bg-slate-950 dark:text-slate-100",
                         icon ? "pl-10" : "pl-3",
+                        suffix ? "pr-16" : "pr-10",
                     )}
                 />
+                {suffix ? (
+                    <span className="pointer-events-none absolute right-10 top-1/2 -translate-y-1/2 text-sm text-slate-500 dark:text-slate-400">
+                        {suffix}
+                    </span>
+                ) : null}
                 <button
                     type="button"
                     onClick={() => setShowSlider((s) => !s)}
@@ -138,6 +148,7 @@ export function SliderInput({
             )}
 
             {isInvalid && <div className="text-xs text-rose-500 dark:text-rose-400">{t('app.input_error')}</div>}
+            {warning ? <div className="text-xs text-amber-600 dark:text-amber-400">{warning}</div> : null}
             {hint ? <div id={`${id}-hint`} className="text-xs text-slate-500 dark:text-slate-400">{hint}</div> : null}
         </div>
     )

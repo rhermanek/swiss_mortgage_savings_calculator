@@ -94,6 +94,24 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ')
 }
 
+function clampNum(value: string, min: number, max: number, fallback: number) {
+  const n = Number.parseFloat(value)
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(max, Math.max(min, n))
+}
+
+// Future value with monthly contributions, compounding monthly. Falls back to
+// linear when annualRate <= 0.
+function projectCompound(principal: number, monthly: number, annualRate: number, months: number) {
+  if (months <= 0) return principal
+  if (annualRate <= 0 || !Number.isFinite(annualRate)) return principal + monthly * months
+  const r = annualRate / 12
+  const factor = Math.pow(1 + r, months)
+  return principal * factor + monthly * (factor - 1) / r
+}
+
+const PILLAR_3A_ANNUAL_CAP = 7258 // CHF, "kleine Säule 3a" with PK (2025 reference)
+
 function Card(props: React.PropsWithChildren<{ className?: string }>) {
   return (
     <div
@@ -237,6 +255,10 @@ function AppContent() {
   const [bruttoeinkommen, setBruttoeinkommen] = usePersistentState('bruttoeinkommen', '0')
   const [bruttoeinkommen2, setBruttoeinkommen2] = usePersistentState('bruttoeinkommen2', '0')
 
+  const [equityPct, setEquityPct] = usePersistentState('equityPct', '20')
+  const [softEquityPct, setSoftEquityPct] = usePersistentState('softEquityPct', '10')
+  const [growthRate, setGrowthRate] = usePersistentState('growthRate', '0')
+
   // Person 2
   const [person2Active, setPerson2Active] = useState(() => localStorage.getItem('person2Active') === 'true')
   useEffect(() => { localStorage.setItem('person2Active', String(person2Active)) }, [person2Active])
@@ -285,8 +307,22 @@ function AppContent() {
   const pkMonthlyN2 = useMemo(() => person2Active ? parseMoney(pensionskasseMonatlich2) : 0, [person2Active, pensionskasseMonatlich2])
   const otherMonthlySavingsN2 = useMemo(() => person2Active ? parseMoney(sonstigeSparrateMonatlich2) : 0, [person2Active, sonstigeSparrateMonatlich2])
 
-  const totalRequired = useMemo(() => kaufpreisN * 0.2, [kaufpreisN])
-  const hardRequired = useMemo(() => kaufpreisN * 0.1, [kaufpreisN])
+  const equityPctN = useMemo(() => clampNum(equityPct, 10, 50, 20), [equityPct])
+  const softEquityCapN = equityPctN / 2 // legal max for soft = half of total equity
+  const softEquityPctN = useMemo(() => clampNum(softEquityPct, 0, softEquityCapN, Math.min(10, softEquityCapN)), [softEquityCapN, softEquityPct])
+  const growthRateN = useMemo(() => clampNum(growthRate, 0, 20, 0) / 100, [growthRate])
+
+  // Keep stored softEquityPct in sync when its cap shrinks (e.g. user lowered equityPct)
+  useEffect(() => {
+    const stored = Number.parseFloat(softEquityPct)
+    if (Number.isFinite(stored) && stored > softEquityCapN) {
+      setSoftEquityPct(String(softEquityCapN))
+    }
+  }, [softEquityCapN, softEquityPct, setSoftEquityPct])
+
+  const totalRequired = useMemo(() => kaufpreisN * (equityPctN / 100), [equityPctN, kaufpreisN])
+  const hardRequired = useMemo(() => kaufpreisN * ((equityPctN - softEquityPctN) / 100), [equityPctN, kaufpreisN, softEquityPctN])
+  const softMaxAllowed = useMemo(() => kaufpreisN * (softEquityPctN / 100), [kaufpreisN, softEquityPctN])
 
   const priceValid = kaufpreisN > 0
 
@@ -295,15 +331,15 @@ function AppContent() {
     [zielMonat],
   )
 
-  // Person 1 projections
-  const s3aProjected1 = useMemo(() => s3aN + s3aMonthlyN * monthsRemaining, [monthsRemaining, s3aMonthlyN, s3aN])
-  const pkProjected1 = useMemo(() => pkN + pkMonthlyN * monthsRemaining, [monthsRemaining, pkMonthlyN, pkN])
-  const otherProjected1 = useMemo(() => otherN + otherMonthlySavingsN * monthsRemaining, [monthsRemaining, otherMonthlySavingsN, otherN])
+  // Person 1 projections (compound monthly when growthRate > 0)
+  const s3aProjected1 = useMemo(() => projectCompound(s3aN, s3aMonthlyN, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, s3aMonthlyN, s3aN])
+  const pkProjected1 = useMemo(() => projectCompound(pkN, pkMonthlyN, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, pkMonthlyN, pkN])
+  const otherProjected1 = useMemo(() => projectCompound(otherN, otherMonthlySavingsN, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, otherMonthlySavingsN, otherN])
 
   // Person 2 projections
-  const s3aProjected2 = useMemo(() => s3aN2 + s3aMonthlyN2 * monthsRemaining, [monthsRemaining, s3aMonthlyN2, s3aN2])
-  const pkProjected2 = useMemo(() => pkN2 + pkMonthlyN2 * monthsRemaining, [monthsRemaining, pkMonthlyN2, pkN2])
-  const otherProjected2 = useMemo(() => otherN2 + otherMonthlySavingsN2 * monthsRemaining, [monthsRemaining, otherMonthlySavingsN2, otherN2])
+  const s3aProjected2 = useMemo(() => projectCompound(s3aN2, s3aMonthlyN2, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, s3aMonthlyN2, s3aN2])
+  const pkProjected2 = useMemo(() => projectCompound(pkN2, pkMonthlyN2, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, pkMonthlyN2, pkN2])
+  const otherProjected2 = useMemo(() => projectCompound(otherN2, otherMonthlySavingsN2, growthRateN, monthsRemaining), [growthRateN, monthsRemaining, otherMonthlySavingsN2, otherN2])
 
   // Combined
   const s3aProjected = useMemo(() => s3aProjected1 + s3aProjected2, [s3aProjected1, s3aProjected2])
@@ -329,9 +365,19 @@ function AppContent() {
     [barN2, otherProjected2, s3aProjected2],
   )
 
+  // PK only counts toward equity up to softMaxAllowed (bank rule)
+  const usableSoftAtTarget = useMemo(
+    () => Math.min(pkProjected, softMaxAllowed),
+    [pkProjected, softMaxAllowed],
+  )
+  const usableTotalAtTarget = useMemo(
+    () => hardAssetsAtTarget + usableSoftAtTarget,
+    [hardAssetsAtTarget, usableSoftAtTarget],
+  )
+
   const totalShortfallAtTarget = useMemo(
-    () => Math.max(0, totalRequired - totalAssetsAtTarget),
-    [totalAssetsAtTarget, totalRequired],
+    () => Math.max(0, totalRequired - usableTotalAtTarget),
+    [totalRequired, usableTotalAtTarget],
   )
   const hardShortfallAtTarget = useMemo(
     () => Math.max(0, hardRequired - hardAssetsAtTarget),
@@ -352,11 +398,11 @@ function AppContent() {
 
   const totalProgress = useMemo(() => {
     if (totalRequired <= 0) return 0
-    return clamp01(totalAssetsAtTarget / totalRequired)
-  }, [totalAssetsAtTarget, totalRequired])
+    return clamp01(usableTotalAtTarget / totalRequired)
+  }, [totalRequired, usableTotalAtTarget])
 
   const hardRuleMet = hardAssetsAtTarget >= hardRequired
-  const totalRuleMet = totalAssetsAtTarget >= totalRequired
+  const totalRuleMet = usableTotalAtTarget >= totalRequired
 
   const showHardWarning = totalRuleMet && !hardRuleMet
   const invalidDate = priceValid && savingsGap > 0 && monthsRemaining <= 0
@@ -373,10 +419,9 @@ function AppContent() {
     )
   }, [language, zielMonat])
 
-  // Progress bar segments (capped at totalRequired)
-  const hardCapped = Math.min(hardAssetsAtTarget, totalRequired)
-  const softRemaining = Math.max(0, totalRequired - hardCapped)
-  const softCapped = Math.min(pkProjected, softRemaining)
+  // Progress bar segments — soft capped at the legal/user soft limit, hard fills the rest
+  const softCapped = Math.min(pkProjected, softMaxAllowed)
+  const hardCapped = Math.min(hardAssetsAtTarget, Math.max(0, totalRequired - softCapped))
   const gapDisplay = Math.max(0, totalRequired - hardCapped - softCapped)
   const pct = (n: number) => (totalRequired > 0 ? (n / totalRequired) * 100 : 0)
 
@@ -397,7 +442,7 @@ function AppContent() {
   const TRAGBARKEIT_AMORT_YEARS = 15
   const TRAGBARKEIT_MAX_RATIO = 1 / 3
 
-  const mortgageAmount = useMemo(() => kaufpreisN * 0.8, [kaufpreisN])
+  const mortgageAmount = useMemo(() => kaufpreisN * (1 - equityPctN / 100), [equityPctN, kaufpreisN])
   const annualInterest = useMemo(() => mortgageAmount * TRAGBARKEIT_INTEREST_RATE, [mortgageAmount])
   const annualAmortization = useMemo(() => {
     const targetMortgage = kaufpreisN * TRAGBARKEIT_AMORT_TARGET_LTV
@@ -540,6 +585,38 @@ function AppContent() {
                       hasError={invalidDate}
                     />
                   </div>
+
+                  <SliderInput
+                    id="equityPct"
+                    label={t('app.label_equity_pct')}
+                    value={equityPct}
+                    onChange={setEquityPct}
+                    min={10}
+                    max={50}
+                    step={1}
+                    suffix="%"
+                    hint={t('app.hint_equity_pct')}
+                  />
+
+                  <SliderInput
+                    id="softEquityPct"
+                    label={t('app.label_soft_pct')}
+                    value={softEquityPct}
+                    onChange={setSoftEquityPct}
+                    min={0}
+                    max={softEquityCapN}
+                    step={1}
+                    suffix="%"
+                    hint={t('app.hint_soft_pct')}
+                  />
+
+                  <details className="text-xs text-slate-500 dark:text-slate-400">
+                    <summary className="cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 inline-flex items-center gap-1">
+                      <Info className="h-3.5 w-3.5" />
+                      {t('app.info_wef_title')}
+                    </summary>
+                    <p className="mt-2 leading-relaxed">{t('app.info_wef_text')}</p>
+                  </details>
                 </CardContent>
               </Card>
 
@@ -703,6 +780,7 @@ function AppContent() {
                         max={3000}
                         step={50}
                         icon={<PiggyBank className="h-4 w-4" />}
+                        warning={s3aMonthlyN * 12 > PILLAR_3A_ANNUAL_CAP ? t('app.warning_3a_cap', { cap: formatCHF(PILLAR_3A_ANNUAL_CAP, { decimals: 0 }), current: formatCHF(s3aMonthlyN * 12, { decimals: 0 }) }) : undefined}
                       />
                       <SliderInput
                         id="pensionskasseMonatlich"
@@ -735,6 +813,7 @@ function AppContent() {
                         max={3000}
                         step={50}
                         icon={<PiggyBank className="h-4 w-4" />}
+                        warning={s3aMonthlyN2 * 12 > PILLAR_3A_ANNUAL_CAP ? t('app.warning_3a_cap', { cap: formatCHF(PILLAR_3A_ANNUAL_CAP, { decimals: 0 }), current: formatCHF(s3aMonthlyN2 * 12, { decimals: 0 }) }) : undefined}
                       />
                       <SliderInput
                         id="pensionskasseMonatlich2"
@@ -758,6 +837,20 @@ function AppContent() {
                       />
                     </>
                   )}
+
+                  <div className="border-t border-slate-200 dark:border-slate-800 pt-6">
+                    <SliderInput
+                      id="growthRate"
+                      label={t('app.label_growth_rate')}
+                      value={growthRate}
+                      onChange={setGrowthRate}
+                      min={0}
+                      max={10}
+                      step={0.5}
+                      suffix="%"
+                      hint={t('app.hint_growth_rate')}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
@@ -805,7 +898,7 @@ function AppContent() {
                     <div>
                       <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_analysis_title')}</div>
                       <div className="text-sm text-slate-500 dark:text-slate-400">
-                        {t('app.label_20pct')} ({formatCHF(totalRequired)})
+                        {t('app.label_20pct', { pct: equityPctN })} ({formatCHF(totalRequired)})
                       </div>
                     </div>
                     {!priceValid ? (
@@ -845,7 +938,7 @@ function AppContent() {
                           <span className="ml-2 text-xl font-medium text-slate-500 dark:text-slate-400">{t('app.summary_per_month')}</span>
                         </div>
                         <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-                          {t('app.hero_subtitle', { date: targetDateLabel })}
+                          {t('app.hero_subtitle', { date: targetDateLabel, pct: equityPctN })}
                         </p>
                         {invalidDate && (
                           <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">{t('app.summary_error_date')}</div>
@@ -881,10 +974,10 @@ function AppContent() {
                             title={`${t('app.chart_gap')}: ${formatCHF(gapDisplay, { decimals: 0 })}`}
                           />
                         </div>
-                        {/* 50% marker (10% hard hurdle) */}
+                        {/* hard-equity hurdle marker */}
                         <div
                           className="pointer-events-none absolute top-0 h-full w-px bg-slate-700/40 dark:bg-slate-200/40"
-                          style={{ left: '50%' }}
+                          style={{ left: `${pct(hardRequired)}%` }}
                           title={t('app.progress_marker_hard')}
                         />
                         {/* "Today" tick */}
@@ -1068,6 +1161,7 @@ function AppContent() {
                     months={monthsRemaining + 12}
                     targetAmount={totalRequired}
                     targetMonthIndex={monthsRemaining}
+                    annualRate={growthRateN}
                   />
                   <div className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
                     {t('app.growth_note')}

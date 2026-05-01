@@ -19,6 +19,7 @@ type GrowthChartProps = {
     months: number
     targetAmount: number
     targetMonthIndex?: number
+    annualRate?: number
     className?: string
 }
 
@@ -142,6 +143,7 @@ export function GrowthChart({
     months,
     targetAmount,
     targetMonthIndex,
+    annualRate = 0,
     className,
 }: GrowthChartProps) {
     const { t, language } = useLanguage()
@@ -218,14 +220,28 @@ export function GrowthChart({
 
         const points = []
         const now = new Date()
+        const monthlyRate = annualRate > 0 ? annualRate / 12 : 0
+
+        // Iterative compound (or linear when monthlyRate === 0): each step grows the
+        // prior balance by monthlyRate and adds the monthly contribution.
+        let liquid = currentLiquidAssets
+        let s3a = current3aAssets
+        let pk = currentPKAssets
+        let liquid2 = hasPerson2 ? currentLiquidAssets2! : 0
+        let s3a2 = hasPerson2 ? current3aAssets2! : 0
+        let pk2 = hasPerson2 ? currentPKAssets2! : 0
 
         for (let i = 0; i <= months; i++) {
-            const liquid = currentLiquidAssets + (monthlyLiquidContribution * i)
-            const s3a = current3aAssets + (monthly3aContribution * i)
-            const pk = currentPKAssets + (monthlyPKContribution * i)
-            const liquid2 = hasPerson2 ? (currentLiquidAssets2! + (monthlyLiquidContribution2! * i)) : 0
-            const s3a2 = hasPerson2 ? (current3aAssets2! + (monthly3aContribution2! * i)) : 0
-            const pk2 = hasPerson2 ? (currentPKAssets2! + (monthlyPKContribution2! * i)) : 0
+            if (i > 0) {
+                liquid = liquid * (1 + monthlyRate) + monthlyLiquidContribution
+                s3a = s3a * (1 + monthlyRate) + monthly3aContribution
+                pk = pk * (1 + monthlyRate) + monthlyPKContribution
+                if (hasPerson2) {
+                    liquid2 = liquid2 * (1 + monthlyRate) + (monthlyLiquidContribution2 ?? 0)
+                    s3a2 = s3a2 * (1 + monthlyRate) + (monthly3aContribution2 ?? 0)
+                    pk2 = pk2 * (1 + monthlyRate) + (monthlyPKContribution2 ?? 0)
+                }
+            }
 
             const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
             const label = d.toLocaleDateString(language === 'de' ? 'de-CH' : 'en-US', { month: 'short', year: '2-digit' })
@@ -245,7 +261,7 @@ export function GrowthChart({
             points.push(point)
         }
         return points
-    }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, currentLiquidAssets2, monthlyLiquidContribution2, current3aAssets2, monthly3aContribution2, currentPKAssets2, monthlyPKContribution2, months, language, hasPerson2])
+    }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, currentLiquidAssets2, monthlyLiquidContribution2, current3aAssets2, monthly3aContribution2, currentPKAssets2, monthlyPKContribution2, months, language, hasPerson2, annualRate])
 
     if (!data.length) return null
 
