@@ -4,7 +4,7 @@ import { de, enUS } from 'date-fns/locale'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { useLanguage } from '../i18n/LanguageContext'
+import { useLanguage } from '../i18n/useLanguage'
 
 type MonthPickerProps = {
     value: string // yyyy-mm
@@ -29,15 +29,12 @@ export function MonthPicker({ value, onChange, label, hasError, className }: Mon
         return new Date(y, m - 1, 1)
     }, [value])
 
-    // View state (which year we are looking at in the picker)
     const [viewDate, setViewDate] = React.useState(dateValue)
 
-    // Sync view date when opening
-    React.useEffect(() => {
-        if (open) {
-            setViewDate(dateValue)
-        }
-    }, [open, dateValue])
+    const handleOpenChange = (next: boolean) => {
+        setOpen(next)
+        if (next) setViewDate(dateValue)
+    }
 
     const nextYear = () => setViewDate(d => addMonths(d, 12))
     const prevYear = () => setViewDate(d => subMonths(d, 12))
@@ -60,7 +57,7 @@ export function MonthPicker({ value, onChange, label, hasError, className }: Mon
                     {label}
                 </label>
             )}
-            <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+            <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
                 <PopoverPrimitive.Trigger asChild>
                     <button
                         className={cn(

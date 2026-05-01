@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { ChevronRight, Check, X, Users } from "lucide-react"
 import { SliderInput } from "./SliderInput"
 import { MonthPicker } from "./MonthPicker"
-import { useLanguage } from "../i18n/LanguageContext"
+import { useLanguage } from "../i18n/useLanguage"
 
 export type WizardValues = {
     kaufpreis: string
@@ -32,18 +32,20 @@ type WizardProps = {
 }
 
 export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardProps) {
+    if (!isOpen) return null
+    return (
+        <WizardContent
+            onClose={onClose}
+            onComplete={onComplete}
+            initialValues={initialValues}
+        />
+    )
+}
+
+function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps, "isOpen">) {
     const { t } = useLanguage()
     const [step, setStep] = useState(0)
     const [values, setValues] = useState<WizardValues>(initialValues)
-
-    useEffect(() => {
-        if (isOpen) {
-            setValues(initialValues)
-            setStep(0)
-        }
-    }, [isOpen, initialValues])
-
-    if (!isOpen) return null
 
     const handleNext = () => setStep((s) => s + 1)
     const handleBack = () => setStep((s) => s - 1)
@@ -57,7 +59,7 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
         setValues((prev) => ({ ...prev, [key]: val }))
     }
 
-    const PartnerToggle = () => (
+    const partnerToggle = (
         <button
             type="button"
             onClick={() => updateValue("person2Active", !values.person2Active)}
@@ -127,7 +129,7 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
                     <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl text-sm text-amber-800 dark:text-amber-200">
                         {t('wizard.step_3_info')}
                     </div>
-                    <PartnerToggle />
+                    {partnerToggle}
                     {values.person2Active && (
                         <div className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                             {t('wizard.person1_label')}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { cn } from '../lib/utils'
-import { useLanguage } from '../i18n/LanguageContext'
+import { useLanguage } from '../i18n/useLanguage'
 
 type GrowthChartProps = {
     currentLiquidAssets: number
@@ -38,6 +38,91 @@ const PERSON2_SERIES_KEYS = ['pk2', 's3a2', 'liquid2'] as const
 type LegendItem = {
     key: SeriesKey
     label: string
+}
+
+type TooltipPayloadEntry = {
+    name?: string | number
+    value?: number | string
+    color?: string
+    payload?: Record<string, number | string>
+}
+
+type CustomTooltipProps = {
+    active?: boolean
+    payload?: TooltipPayloadEntry[]
+    label?: string | number
+    t: (key: string, params?: Record<string, string | number>) => string
+    language: string
+    hasPerson2: boolean
+    isFiltered: boolean
+    selectedSeries: Set<SeriesKey>
+    activeSeriesKeys: SeriesKey[]
+    isSeriesSelected: (key: SeriesKey) => boolean
+}
+
+function CustomTooltip({
+    active,
+    payload,
+    label,
+    t,
+    language,
+    hasPerson2,
+    isFiltered,
+    selectedSeries,
+    activeSeriesKeys,
+    isSeriesSelected,
+}: CustomTooltipProps) {
+    if (!active || !payload || !payload.length) return null
+    const d = payload[0].payload ?? {}
+    const fmt = new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US')
+    return (
+        <div className="max-w-[280px] w-max rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-1 ring-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:ring-slate-800">
+            <div className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">{label}</div>
+            {[...payload]
+                .reverse()
+                .filter((entry) => isSeriesSelected(entry.name as SeriesKey))
+                .map((entry, index) => {
+                    let name = t('charts.unknown')
+                    const p1 = t('charts.label_person1')
+                    const p2 = t('charts.label_person2')
+                    if (hasPerson2) {
+                        if (entry.name === 'pk') name = `${p1} – ${t('charts.label_pk')}`
+                        else if (entry.name === 's3a') name = `${p1} – ${t('charts.label_3a')}`
+                        else if (entry.name === 'liquid') name = `${p1} – ${t('charts.label_liquid')}`
+                        else if (entry.name === 'pk2') name = `${p2} – ${t('charts.label_pk')}`
+                        else if (entry.name === 's3a2') name = `${p2} – ${t('charts.label_3a')}`
+                        else if (entry.name === 'liquid2') name = `${p2} – ${t('charts.label_liquid')}`
+                    } else {
+                        if (entry.name === 'pk') name = t('charts.label_pk')
+                        else if (entry.name === 's3a') name = t('charts.label_3a')
+                        else if (entry.name === 'liquid') name = t('charts.label_liquid')
+                    }
+                    return (
+                        <div key={index} className="flex items-center gap-3 text-sm">
+                            <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                <span className="text-slate-500 dark:text-slate-400">{name}</span>
+                            </div>
+                            <span className="ml-auto font-medium text-slate-900 dark:text-slate-100 tabular-nums">
+                                CHF {fmt.format(Number(entry.value) || 0)}
+                            </span>
+                        </div>
+                    )
+                })}
+            <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-semibold dark:border-slate-800">
+                <span className="text-slate-900 dark:text-slate-100">{t('charts.label_total')}</span>
+                <span className="text-slate-900 dark:text-slate-100 tabular-nums">
+                    CHF {fmt.format(
+                        isFiltered
+                            ? activeSeriesKeys
+                                .filter((key) => selectedSeries.has(key))
+                                .reduce((sum, key) => sum + (Number(d[key]) || 0), 0)
+                            : Number(d.total) || 0,
+                    )}
+                </span>
+            </div>
+        </div>
+    )
 }
 
 export function GrowthChart({
@@ -159,61 +244,6 @@ export function GrowthChart({
         return points
     }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, currentLiquidAssets2, monthlyLiquidContribution2, current3aAssets2, monthly3aContribution2, currentPKAssets2, monthlyPKContribution2, months, language, hasPerson2])
 
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            const d = payload[0].payload
-            return (
-                <div className="max-w-[280px] w-max rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-1 ring-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:ring-slate-800">
-                    <div className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">{label}</div>
-                    {[...payload]
-                        .reverse()
-                        .filter((entry: any) => isSeriesSelected(entry.name as SeriesKey))
-                        .map((entry: any, index: number) => {
-                        let name = t('charts.unknown')
-                        const p1 = t('charts.label_person1')
-                        const p2 = t('charts.label_person2')
-                        if (hasPerson2) {
-                            if (entry.name === 'pk') name = `${p1} – ${t('charts.label_pk')}`
-                            else if (entry.name === 's3a') name = `${p1} – ${t('charts.label_3a')}`
-                            else if (entry.name === 'liquid') name = `${p1} – ${t('charts.label_liquid')}`
-                            else if (entry.name === 'pk2') name = `${p2} – ${t('charts.label_pk')}`
-                            else if (entry.name === 's3a2') name = `${p2} – ${t('charts.label_3a')}`
-                            else if (entry.name === 'liquid2') name = `${p2} – ${t('charts.label_liquid')}`
-                        } else {
-                            if (entry.name === 'pk') name = t('charts.label_pk')
-                            else if (entry.name === 's3a') name = t('charts.label_3a')
-                            else if (entry.name === 'liquid') name = t('charts.label_liquid')
-                        }
-                        return (
-                            <div key={index} className="flex items-center gap-3 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                    <span className="text-slate-500 dark:text-slate-400">{name}</span>
-                                </div>
-                                <span className="ml-auto font-medium text-slate-900 dark:text-slate-100 tabular-nums">
-                                    CHF {new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US').format(entry.value)}
-                                </span>
-                            </div>
-                        )
-                    })}
-                    <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-semibold dark:border-slate-800">
-                        <span className="text-slate-900 dark:text-slate-100">{t('charts.label_total')}</span>
-                        <span className="text-slate-900 dark:text-slate-100 tabular-nums">
-                            CHF {new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US').format(
-                                isFiltered
-                                    ? activeSeriesKeys
-                                        .filter((key) => selectedSeries.has(key))
-                                        .reduce((sum, key) => sum + (Number(d[key]) || 0), 0)
-                                    : Number(d.total) || 0,
-                            )}
-                        </span>
-                    </div>
-                </div>
-            )
-        }
-        return null
-    }
-
     if (!data.length) return null
 
     return (
@@ -257,7 +287,19 @@ export function GrowthChart({
                         axisLine={false}
                         tickFormatter={(value) => new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US', { notation: "compact" }).format(value)}
                     />
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip
+                        content={
+                            <CustomTooltip
+                                t={t}
+                                language={language}
+                                hasPerson2={hasPerson2}
+                                isFiltered={isFiltered}
+                                selectedSeries={selectedSeries}
+                                activeSeriesKeys={activeSeriesKeys}
+                                isSeriesSelected={isSeriesSelected}
+                            />
+                        }
+                    />
                     {BASE_SERIES_KEYS.map((key) => (
                         <Area key={key} type="monotone" dataKey={key} stackId="1"
                             stroke={COLORS[key]}

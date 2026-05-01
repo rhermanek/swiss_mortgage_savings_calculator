@@ -1,5 +1,5 @@
 import { Languages } from 'lucide-react';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/useLanguage';
 
 export function LanguageSwitcher() {
     const { language, setLanguage } = useLanguage();

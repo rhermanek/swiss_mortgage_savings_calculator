@@ -29,7 +29,7 @@ function parseMoney(raw: string): number {
         .replaceAll('’', "'")
         .replaceAll(' ', '')
         .replaceAll("'", '')
-        .replace(/[^\d,.\-]/g, '')
+        .replace(/[^\d,.-]/g, '')
 
     const hasDot = normalized.includes('.')
     const hasComma = normalized.includes(',')

@@ -19,7 +19,8 @@ import { ThemeProvider } from './components/ThemeProvider'
 import { ThemeToggle } from './components/ThemeToggle'
 import { Wizard, type WizardValues } from './components/Wizard'
 import logoUrl from './assets/logo.png'
-import { LanguageProvider, useLanguage } from './i18n/LanguageContext'
+import { LanguageProvider } from './i18n/LanguageContext'
+import { useLanguage } from './i18n/useLanguage'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 
 // Helper utilities
@@ -40,7 +41,7 @@ function parseMoney(raw: string): number {
     .replaceAll('’', "'")
     .replaceAll(' ', '')
     .replaceAll("'", '')
-    .replace(/[^\d,.\-]/g, '')
+    .replace(/[^\d,.-]/g, '')
 
   const hasDot = normalized.includes('.')
   const hasComma = normalized.includes(',')

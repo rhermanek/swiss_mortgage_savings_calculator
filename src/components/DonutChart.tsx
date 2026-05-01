@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { cn } from '../lib/utils'
-import { useLanguage } from '../i18n/LanguageContext'
+import { useLanguage } from '../i18n/useLanguage'
 
 type DonutChartProps = {
     hardEquity: number
@@ -61,7 +61,7 @@ export function DonutChart({ hardEquity, softEquity, target, className }: DonutC
                         ))}
                     </Pie>
                     <Tooltip
-                        formatter={(value: any) => `CHF ${new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US').format(value)}`}
+                        formatter={(value) => `CHF ${new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US').format(Number(value) || 0)}`}
                         contentStyle={{
                             borderRadius: '12px',
                             border: 'none',
