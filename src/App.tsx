@@ -2,11 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   Banknote,
+  Calculator,
   Check,
   Coins,
   Info,
   Landmark,
+  LineChart,
   PiggyBank,
+  Scale,
+  Target,
+  TrendingUp,
   UserMinus,
   UserPlus,
   Wallet,
@@ -135,6 +140,51 @@ function CardHeader(props: React.PropsWithChildren<{ className?: string }>) {
 
 function CardContent(props: React.PropsWithChildren<{ className?: string }>) {
   return <div className={cx('px-5 py-6', props.className)}>{props.children}</div>
+}
+
+// Colored icon badge + title (+ optional step number) used in every card header.
+// Makes the tool more scannable and guides new users through the input sequence.
+function CardTitleRow({
+  icon,
+  tone,
+  step,
+  title,
+  desc,
+  children,
+}: {
+  icon: React.ReactNode
+  tone: string
+  step?: number
+  title: string
+  desc?: React.ReactNode
+  children?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex min-w-0 items-start gap-3">
+        <div
+          className={cx(
+            'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+            tone,
+          )}
+        >
+          {icon}
+          {step != null && (
+            <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white ring-2 ring-white dark:bg-slate-100 dark:text-slate-900 dark:ring-slate-900">
+              {step}
+            </span>
+          )}
+        </div>
+        <div className="min-w-0">
+          <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</div>
+          {desc != null && (
+            <div className="text-sm text-slate-500 dark:text-slate-400">{desc}</div>
+          )}
+        </div>
+      </div>
+      {children}
+    </div>
+  )
 }
 
 function Label(props: React.PropsWithChildren<{ htmlFor: string }>) {
@@ -557,13 +607,14 @@ function AppContent() {
             {/* Left Column: Inputs */}
             <div className="space-y-8">
               <Card className="dark:bg-slate-900 dark:border-slate-800">
-                <CardHeader className="flex items-center justify-between gap-4 dark:border-slate-800">
-                  <div>
-                    <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_obj_title')}</div>
-                    <div className="text-sm text-slate-500 dark:text-slate-400">
-                      {t('app.card_obj_desc')}
-                    </div>
-                  </div>
+                <CardHeader className="dark:border-slate-800">
+                  <CardTitleRow
+                    step={1}
+                    tone="bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300"
+                    icon={<Target className="h-5 w-5" />}
+                    title={t('app.card_obj_title')}
+                    desc={t('app.card_obj_desc')}
+                  />
                 </CardHeader>
 
                 <CardContent className="space-y-8">
@@ -626,13 +677,13 @@ function AppContent() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_assets_title')}</div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400">
-                        {t('app.card_assets_desc')}
-                      </div>
-                    </div>
+                  <CardTitleRow
+                    step={2}
+                    tone="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300"
+                    icon={<Wallet className="h-5 w-5" />}
+                    title={t('app.card_assets_title')}
+                    desc={t('app.card_assets_desc')}
+                  >
                     {!person2Active && (
                       <button
                         onClick={() => { setPerson2Active(true); setPersonTab('2') }}
@@ -642,7 +693,7 @@ function AppContent() {
                         {t('app.add_partner_btn')}
                       </button>
                     )}
-                  </div>
+                  </CardTitleRow>
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {person2Active && (
@@ -765,10 +816,13 @@ function AppContent() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_monthly_title')}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">
-                    {t('app.card_monthly_desc')}
-                  </div>
+                  <CardTitleRow
+                    step={3}
+                    tone="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300"
+                    icon={<TrendingUp className="h-5 w-5" />}
+                    title={t('app.card_monthly_title')}
+                    desc={t('app.card_monthly_desc')}
+                  />
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {person2Active && (
@@ -886,8 +940,13 @@ function AppContent() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_income_title')}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">{t('app.card_income_desc')}</div>
+                  <CardTitleRow
+                    step={4}
+                    tone="bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300"
+                    icon={<Banknote className="h-5 w-5" />}
+                    title={t('app.card_income_title')}
+                    desc={t('app.card_income_desc')}
+                  />
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {person2Active && (
@@ -921,16 +980,15 @@ function AppContent() {
             </div>
 
             {/* Right Column: Analysis */}
-            <div className="space-y-8 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto lg:pr-1 lg:pb-4">
+            <div className="space-y-8 lg:self-start">
               <Card className="overflow-hidden border-slate-200 dark:border-slate-800 dark:bg-slate-900">
                 <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-800">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_analysis_title')}</div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400">
-                        {t('app.label_20pct', { pct: equityPctN })} ({formatCHF(totalRequired)})
-                      </div>
-                    </div>
+                  <CardTitleRow
+                    tone="bg-blue-600 text-white dark:bg-blue-500"
+                    icon={<Calculator className="h-5 w-5" />}
+                    title={t('app.card_analysis_title')}
+                    desc={`${t('app.label_20pct', { pct: equityPctN })} (${formatCHF(totalRequired)})`}
+                  >
                     {!priceValid ? (
                       <Pill tone="warn">{t('app.status_enter_price')}</Pill>
                     ) : savingsGap <= 0 ? (
@@ -938,7 +996,7 @@ function AppContent() {
                     ) : (
                       <Pill tone="info">{Math.round(totalProgress * 100)}% {t('app.status_n_reached')}</Pill>
                     )}
-                  </div>
+                  </CardTitleRow>
                 </CardHeader>
 
                 <CardContent className="space-y-7">
@@ -1081,18 +1139,19 @@ function AppContent() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_tragbarkeit_title')}</div>
-                      <div className="text-sm text-slate-500 dark:text-slate-400">{t('app.card_tragbarkeit_desc')}</div>
-                    </div>
+                  <CardTitleRow
+                    tone="bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300"
+                    icon={<Scale className="h-5 w-5" />}
+                    title={t('app.card_tragbarkeit_title')}
+                    desc={t('app.card_tragbarkeit_desc')}
+                  >
                     {priceValid && totalIncome > 0 && (
                       <Pill tone={tragbarkeitPasses ? 'ok' : 'warn'}>
                         {tragbarkeitPasses ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
                         {tragbarkeitPasses ? t('app.tragbarkeit_pass') : t('app.tragbarkeit_fail')}
                       </Pill>
                     )}
-                  </div>
+                  </CardTitleRow>
                 </CardHeader>
                 <CardContent className="space-y-5">
                   {!priceValid || totalIncome <= 0 ? (
@@ -1175,8 +1234,12 @@ function AppContent() {
 
               <Card className="dark:bg-slate-900 dark:border-slate-800">
                 <CardHeader className="dark:border-slate-800">
-                  <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t('app.card_growth_title')}</div>
-                  <div className="text-sm text-slate-500 dark:text-slate-400">{t('app.card_growth_desc')}</div>
+                  <CardTitleRow
+                    tone="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300"
+                    icon={<LineChart className="h-5 w-5" />}
+                    title={t('app.card_growth_title')}
+                    desc={t('app.card_growth_desc')}
+                  />
                 </CardHeader>
                 <CardContent>
                   <GrowthChart
