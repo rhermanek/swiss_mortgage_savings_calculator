@@ -1,7 +1,8 @@
 import * as React from 'react'
 import * as SliderPrimitive from '@radix-ui/react-slider'
-import { SlidersHorizontal } from 'lucide-react'
+import { AlertCircle, SlidersHorizontal } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { formatNumber, isValidNumberInput, parseMoney } from '../lib/format'
 import { useLanguage } from '../i18n/useLanguage'
 
 type SliderInputProps = {
@@ -12,33 +13,10 @@ type SliderInputProps = {
     min?: number
     max?: number
     step?: number
-    icon?: React.ReactNode
+    unit?: 'chf' | 'percent'
     hint?: string
     warning?: string
-    suffix?: string
-}
-
-function parseMoney(raw: string): number {
-    const trimmed = raw.trim()
-    if (!trimmed) return 0
-    const normalized = trimmed
-        .replaceAll('’', "'")
-        .replaceAll(' ', '')
-        .replaceAll("'", '')
-        .replace(/[^\d,.-]/g, '')
-
-    const hasDot = normalized.includes('.')
-    const hasComma = normalized.includes(',')
-
-    let numStr = normalized
-    if (hasDot && hasComma) {
-        numStr = numStr.replaceAll(',', '')
-    } else if (!hasDot && hasComma) {
-        numStr = numStr.replaceAll(',', '.')
-    }
-
-    const n = Number.parseFloat(numStr)
-    return Number.isFinite(n) ? Math.max(0, n) : 0
+    meta?: React.ReactNode
 }
 
 export function SliderInput({
@@ -49,107 +27,130 @@ export function SliderInput({
     min = 0,
     max = 1000000,
     step = 1000,
-    icon,
+    unit = 'chf',
     hint,
     warning,
-    suffix,
+    meta,
 }: SliderInputProps) {
     const { t } = useLanguage()
     const [showSlider, setShowSlider] = React.useState(false)
     const numericValue = React.useMemo(() => parseMoney(value), [value])
+    const isInvalid = !isValidNumberInput(value)
+    const isPercent = unit === 'percent'
 
-    const isInvalid = React.useMemo(() => {
-        const trimmed = value.trim()
-        if (!trimmed) return false
-        const normalized = trimmed.replaceAll('’', '').replaceAll("'", '').replace(/\s/g, '')
-        return !/^[0-9]+([.,][0-9]*)?$/.test(normalized)
-    }, [value])
+    const describedBy = [
+        isInvalid && `${id}-error`,
+        warning && `${id}-warning`,
+        hint && `${id}-hint`,
+    ].filter(Boolean).join(' ') || undefined
 
     const handleSliderChange = (vals: number[]) => {
-        const newVal = vals[0]
-        const formatted = new Intl.NumberFormat('de-CH').format(newVal).replaceAll('’', "'")
-        onChange(formatted)
+        onChange(isPercent ? String(Math.round(vals[0] * 100) / 100) : formatNumber(vals[0]))
     }
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        onChange(e.target.value)
+    // Normalise money input to Swiss grouping once the user leaves the field.
+    const handleBlur = () => {
+        if (isPercent || isInvalid || !value.trim()) return
+        const formatted = formatNumber(numericValue)
+        if (formatted !== value) onChange(formatted)
     }
 
     return (
-        <div className="space-y-2">
-            <label htmlFor={id} className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                {label}
-            </label>
+        <div className="space-y-1.5">
+            <div className="flex min-h-5 items-baseline justify-between gap-3">
+                <label htmlFor={id} className="text-sm font-medium text-fg">
+                    {label}
+                    <span className="sr-only"> ({isPercent ? '%' : 'CHF'})</span>
+                </label>
+                {meta != null && <span className="shrink-0 text-xs tabular-nums text-fg-muted">{meta}</span>}
+            </div>
 
-            <div className="relative">
-                {icon ? (
-                    <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
-                        {icon}
-                    </div>
-                ) : null}
+            <div
+                className={cn(
+                    'flex h-11 items-center rounded-xl border bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[border-color,box-shadow]',
+                    'focus-within:ring-4',
+                    isInvalid
+                        ? 'border-danger focus-within:ring-danger/15'
+                        : 'border-input hover:border-fg-muted/60 focus-within:border-fg-muted focus-within:ring-fg/8',
+                )}
+            >
+                {!isPercent && (
+                    <span aria-hidden="true" className="select-none pl-3 text-sm font-medium text-fg-muted">
+                        CHF
+                    </span>
+                )}
                 <input
                     id={id}
                     inputMode="decimal"
+                    autoComplete="off"
+                    spellCheck={false}
                     value={value}
-                    aria-describedby={hint ? `${id}-hint` : undefined}
-                    onChange={handleInputChange}
-                    className={cn(
-                        "h-11 w-full rounded-xl border bg-white text-[15px] text-slate-900 shadow-sm outline-none transition",
-                        "placeholder:text-slate-400 focus:ring-4",
-                        isInvalid
-                            ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950/40"
-                            : "border-slate-200 focus:border-slate-300 focus:ring-slate-100 dark:border-slate-800 dark:focus:ring-slate-800 dark:focus:border-slate-700",
-                        "dark:bg-slate-950 dark:text-slate-100",
-                        icon ? "pl-10" : "pl-3",
-                        suffix ? "pr-16" : "pr-10",
-                    )}
+                    aria-invalid={isInvalid || undefined}
+                    aria-describedby={describedBy}
+                    onChange={(e) => onChange(e.target.value)}
+                    onBlur={handleBlur}
+                    className="h-full min-w-0 flex-1 bg-transparent px-3 text-[15px] tabular-nums text-fg outline-none placeholder:text-fg-muted focus-visible:outline-none"
                 />
-                {suffix ? (
-                    <span className="pointer-events-none absolute right-10 top-1/2 -translate-y-1/2 text-sm text-slate-500 dark:text-slate-400">
-                        {suffix}
+                {isPercent && (
+                    <span aria-hidden="true" className="select-none text-sm font-medium text-fg-muted">
+                        %
                     </span>
-                ) : null}
+                )}
                 <button
                     type="button"
                     onClick={() => setShowSlider((s) => !s)}
-                    aria-label={t('app.toggle_slider')}
+                    aria-label={`${t('app.toggle_slider')}: ${label}`}
                     aria-expanded={showSlider}
                     aria-controls={`${id}-slider`}
                     className={cn(
-                        "absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 transition-colors",
+                        'mx-1.5 flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors',
                         showSlider
-                            ? "text-slate-700 bg-slate-100 dark:text-slate-200 dark:bg-slate-800"
-                            : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-200 dark:hover:bg-slate-800",
+                            ? 'bg-subtle-strong text-fg'
+                            : 'text-fg-muted hover:bg-subtle hover:text-fg',
                     )}
                 >
-                    <SlidersHorizontal className="h-4 w-4" />
+                    <SlidersHorizontal className="size-4" />
                 </button>
             </div>
 
             {showSlider && (
-                <div id={`${id}-slider`} className="px-1 pt-2">
+                <div id={`${id}-slider`} className="px-1 pb-1 pt-3">
                     <SliderPrimitive.Root
-                        className="relative flex w-full touch-none select-none items-center"
-                        value={[numericValue]}
+                        className="relative flex h-6 w-full touch-none select-none items-center"
+                        value={[Math.min(max, numericValue)]}
                         max={max}
                         min={min}
                         step={step}
                         onValueChange={handleSliderChange}
                     >
-                        <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                            <SliderPrimitive.Range className="absolute h-full bg-slate-900 dark:bg-slate-50" />
+                        <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-subtle-strong">
+                            <SliderPrimitive.Range className="absolute h-full bg-fg" />
                         </SliderPrimitive.Track>
                         <SliderPrimitive.Thumb
                             aria-label={label}
-                            className="block h-6 w-6 rounded-full border-2 border-slate-900 bg-white ring-offset-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 dark:border-slate-50 dark:bg-slate-950 dark:ring-offset-slate-950 dark:focus-visible:ring-slate-300 shadow-sm cursor-grab active:cursor-grabbing"
+                            className="block size-6 cursor-grab rounded-full border-2 border-fg bg-surface shadow-sm transition-shadow hover:ring-4 hover:ring-fg/10 active:cursor-grabbing"
                         />
                     </SliderPrimitive.Root>
                 </div>
             )}
 
-            {isInvalid && <div className="text-xs text-rose-500 dark:text-rose-400">{t('app.input_error')}</div>}
-            {warning ? <div className="text-xs text-amber-600 dark:text-amber-400">{warning}</div> : null}
-            {hint ? <div id={`${id}-hint`} className="text-xs text-slate-500 dark:text-slate-400">{hint}</div> : null}
+            {isInvalid && (
+                <p id={`${id}-error`} className="flex items-center gap-1 text-xs text-danger">
+                    <AlertCircle aria-hidden="true" className="size-3.5 shrink-0" />
+                    {t('app.input_error')}
+                </p>
+            )}
+            {warning ? (
+                <p id={`${id}-warning`} className="flex items-start gap-1 text-xs leading-relaxed text-warning">
+                    <AlertCircle aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+                    {warning}
+                </p>
+            ) : null}
+            {hint ? (
+                <p id={`${id}-hint`} className="text-xs leading-relaxed text-fg-muted">
+                    {hint}
+                </p>
+            ) : null}
         </div>
     )
 }

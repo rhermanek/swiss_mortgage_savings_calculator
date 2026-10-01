@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { cn } from '../lib/utils'
+import { formatCHF, formatCompact } from '../lib/format'
 import { useLanguage } from '../i18n/useLanguage'
+import { Disclosure, SegmentedControl, Swatch } from './ui'
 
 type GrowthChartProps = {
     currentLiquidAssets: number
@@ -25,105 +27,61 @@ type GrowthChartProps = {
     className?: string
 }
 
-const COLORS = {
-    pk: '#10b981',
-    s3a: '#8b5cf6',
-    liquid: '#3b82f6',
-    pk2: '#f59e0b',
-    s3a2: '#f43f5e',
-    liquid2: '#06b6d4',
-} as const
+type GroupBy = 'asset' | 'person'
+type SeriesKey = 'liquid' | 's3a' | 'pk' | 'p1' | 'p2'
 
-type SeriesKey = keyof typeof COLORS
-
-const BASE_SERIES_KEYS = ['pk', 's3a', 'liquid'] as const
-const PERSON2_SERIES_KEYS = ['pk2', 's3a2', 'liquid2'] as const
-
-type LegendItem = {
+type SeriesDef = {
     key: SeriesKey
     label: string
+    color: string
+    swatch: string
+}
+
+type Point = Record<SeriesKey | 'total', number> & { name: string; fullName: string }
+
+// Same entity → same color as the equity progress bar in the result card.
+const SERIES_STYLE: Record<SeriesKey, { color: string; swatch: string }> = {
+    liquid: { color: 'var(--chart-blue)', swatch: 'bg-chart-blue' },
+    s3a: { color: 'var(--chart-aqua)', swatch: 'bg-chart-aqua' },
+    pk: { color: 'var(--chart-orange)', swatch: 'bg-chart-orange' },
+    p1: { color: 'var(--chart-blue)', swatch: 'bg-chart-blue' },
+    p2: { color: 'var(--chart-orange)', swatch: 'bg-chart-orange' },
 }
 
 type TooltipPayloadEntry = {
-    name?: string | number
+    dataKey?: string | number
     value?: number | string
-    color?: string
-    payload?: Record<string, number | string>
+    payload?: Point
 }
 
-type CustomTooltipProps = {
-    active?: boolean
-    payload?: TooltipPayloadEntry[]
-    label?: string | number
-    t: (key: string, params?: Record<string, string | number>) => string
-    language: string
-    hasPerson2: boolean
-    isFiltered: boolean
-    selectedSeries: Set<SeriesKey>
-    activeSeriesKeys: SeriesKey[]
-    isSeriesSelected: (key: SeriesKey) => boolean
-}
-
-function CustomTooltip({
+function ChartTooltip({
     active,
     payload,
-    label,
-    t,
-    language,
-    hasPerson2,
-    isFiltered,
-    selectedSeries,
-    activeSeriesKeys,
-    isSeriesSelected,
-}: CustomTooltipProps) {
-    if (!active || !payload || !payload.length) return null
-    const d = payload[0].payload ?? {}
-    const fmt = new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US')
+    series,
+    totalLabel,
+}: {
+    active?: boolean
+    payload?: TooltipPayloadEntry[]
+    series: SeriesDef[]
+    totalLabel: string
+}) {
+    if (!active || !payload?.length || !payload[0].payload) return null
+    const point = payload[0].payload
     return (
-        <div className="max-w-[280px] w-max rounded-xl border border-slate-200 bg-white p-3 shadow-xl ring-1 ring-slate-200 dark:bg-slate-950 dark:border-slate-800 dark:ring-slate-800">
-            <div className="mb-2 text-sm font-medium text-slate-900 dark:text-slate-100">{label}</div>
-            {[...payload]
-                .reverse()
-                .filter((entry) => isSeriesSelected(entry.name as SeriesKey))
-                .map((entry, index) => {
-                    let name = t('charts.unknown')
-                    const p1 = t('charts.label_person1')
-                    const p2 = t('charts.label_person2')
-                    if (hasPerson2) {
-                        if (entry.name === 'pk') name = `${p1} – ${t('charts.label_pk')}`
-                        else if (entry.name === 's3a') name = `${p1} – ${t('charts.label_3a')}`
-                        else if (entry.name === 'liquid') name = `${p1} – ${t('charts.label_liquid')}`
-                        else if (entry.name === 'pk2') name = `${p2} – ${t('charts.label_pk')}`
-                        else if (entry.name === 's3a2') name = `${p2} – ${t('charts.label_3a')}`
-                        else if (entry.name === 'liquid2') name = `${p2} – ${t('charts.label_liquid')}`
-                    } else {
-                        if (entry.name === 'pk') name = t('charts.label_pk')
-                        else if (entry.name === 's3a') name = t('charts.label_3a')
-                        else if (entry.name === 'liquid') name = t('charts.label_liquid')
-                    }
-                    return (
-                        <div key={index} className="flex items-center gap-3 text-sm">
-                            <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                                <span className="text-slate-500 dark:text-slate-400">{name}</span>
-                            </div>
-                            <span className="ml-auto font-medium text-slate-900 dark:text-slate-100 tabular-nums">
-                                CHF {fmt.format(Number(entry.value) || 0)}
-                            </span>
-                        </div>
-                    )
-                })}
-            <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-sm font-semibold dark:border-slate-800">
-                <span className="text-slate-900 dark:text-slate-100">{t('charts.label_total')}</span>
-                <span className="text-slate-900 dark:text-slate-100 tabular-nums">
-                    CHF {fmt.format(
-                        isFiltered
-                            ? activeSeriesKeys
-                                .filter((key) => selectedSeries.has(key))
-                                .reduce((sum, key) => sum + (Number(d[key]) || 0), 0)
-                            : Number(d.total) || 0,
-                    )}
-                </span>
+        <div className="min-w-52 rounded-xl border border-border bg-surface p-3 text-sm shadow-lg">
+            <div className="mb-2 font-medium text-fg">{point.fullName}</div>
+            <div className="space-y-1">
+                {[...series].reverse().map((s) => (
+                    <div key={s.key} className="flex items-center gap-2">
+                        <Swatch className={s.swatch} />
+                        <span className="text-fg-secondary">{s.label}</span>
+                        <span className="ml-auto pl-4 tabular-nums text-fg">{formatCHF(point[s.key], { decimals: 0 })}</span>
+                    </div>
+                ))}
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-border pt-2 font-semibold text-fg">
+                <span>{totalLabel}</span>
+                <span className="tabular-nums">{formatCHF(point.total, { decimals: 0 })}</span>
             </div>
         </div>
     )
@@ -151,78 +109,43 @@ export function GrowthChart({
     className,
 }: GrowthChartProps) {
     const { t, language } = useLanguage()
-    const [selectedSeries, setSelectedSeries] = useState<Set<SeriesKey>>(new Set())
+    const [groupBy, setGroupBy] = useState<GroupBy>('asset')
+    const [selected, setSelected] = useState<Set<SeriesKey>>(new Set())
+    const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
 
     const hasPerson2 = currentLiquidAssets2 !== undefined
-    const isFiltered = selectedSeries.size > 0
+    const effectiveGroupBy: GroupBy = hasPerson2 ? groupBy : 'asset'
+    const locale = language === 'de' ? 'de-CH' : 'en-CH'
 
-    const activeSeriesKeys = useMemo(() => {
-        return hasPerson2 ? [...BASE_SERIES_KEYS, ...PERSON2_SERIES_KEYS] : [...BASE_SERIES_KEYS]
-    }, [hasPerson2])
-
-    const legendItems = useMemo<LegendItem[]>(() => {
-        const person1Suffix = hasPerson2 ? ` (${t('charts.label_person1')})` : ''
-        const items: LegendItem[] = []
-
-        if (hasPerson2) {
-            // Group by asset type: PK, 3a, Liquid (each with both persons)
-            items.push(
-                { key: 'pk', label: `${t('charts.label_pk')} (${t('charts.label_person1')})` },
-                { key: 'pk2', label: `${t('charts.label_pk')} (${t('charts.label_person2')})` },
-                { key: 's3a', label: `${t('charts.label_3a')} (${t('charts.label_person1')})` },
-                { key: 's3a2', label: `${t('charts.label_3a')} (${t('charts.label_person2')})` },
-                { key: 'liquid', label: `${t('charts.label_liquid')}${person1Suffix}` },
-                { key: 'liquid2', label: `${t('charts.label_liquid')} (${t('charts.label_person2')})` },
-            )
-        } else {
-            items.push(
-                { key: 'pk', label: `${t('charts.label_pk')}${person1Suffix}` },
-                { key: 's3a', label: `${t('charts.label_3a')}${person1Suffix}` },
-                { key: 'liquid', label: `${t('charts.label_liquid')}${person1Suffix}` },
-            )
+    const series = useMemo<SeriesDef[]>(() => {
+        const keys: SeriesKey[] = effectiveGroupBy === 'person' ? ['p1', 'p2'] : ['liquid', 's3a', 'pk']
+        const labels: Record<SeriesKey, string> = {
+            liquid: t('charts.label_liquid'),
+            s3a: t('charts.label_3a'),
+            pk: t('charts.label_pk'),
+            p1: t('charts.label_person1'),
+            p2: t('charts.label_person2'),
         }
+        return keys.map((key) => ({ key, label: labels[key], ...SERIES_STYLE[key] }))
+    }, [effectiveGroupBy, t])
 
-        return items
-    }, [hasPerson2, t])
-
-    const legendLabelByKey = useMemo(() => {
-        const labels = {} as Record<SeriesKey, string>
-        legendItems.forEach(({ key, label }) => {
-            labels[key] = label
-        })
-        return labels
-    }, [legendItems])
-
-    const legendRows = useMemo<SeriesKey[][]>(() => {
-        if (hasPerson2) {
-            return [
-                ['pk', 'pk2'],
-                ['s3a', 's3a2'],
-                ['liquid', 'liquid2'],
-            ]
-        }
-
-        return [['pk', 's3a', 'liquid']]
-    }, [hasPerson2])
+    // Ignore selections from the other grouping (e.g. after the partner was removed)
+    const isFiltered = series.some((s) => selected.has(s.key))
+    const isActive = (key: SeriesKey) => !isFiltered || selected.has(key)
 
     const toggleSeries = (key: SeriesKey) => {
-        setSelectedSeries((prev) => {
+        setSelected((prev) => {
             const next = new Set(prev)
-            if (next.has(key)) {
-                next.delete(key)
-            } else {
-                next.add(key)
-            }
+            if (next.has(key)) next.delete(key)
+            else next.add(key)
             return next
         })
     }
 
-    const isSeriesSelected = (key: SeriesKey) => !isFiltered || selectedSeries.has(key)
-
-    const data = useMemo(() => {
+    const data = useMemo<Point[]>(() => {
         if (months <= 0) return []
 
-        const points = []
+        const points: Point[] = []
         const now = new Date()
         const monthlyLiquid = annualRateLiquid > 0 ? annualRateLiquid / 12 : 0
         const monthly3a = annualRate3a > 0 ? annualRate3a / 12 : 0
@@ -249,168 +172,189 @@ export function GrowthChart({
             }
 
             const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
-            const label = d.toLocaleDateString(language === 'de' ? 'de-CH' : 'en-US', { month: 'short', year: '2-digit' })
-
-            const point: Record<string, number | string> = {
-                name: label,
-                liquid,
-                s3a,
-                pk,
+            points.push({
+                name: d.toLocaleDateString(locale, { month: 'short', year: '2-digit' }),
+                fullName: d.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
+                liquid: liquid + liquid2,
+                s3a: s3a + s3a2,
+                pk: pk + pk2,
+                p1: liquid + s3a + pk,
+                p2: liquid2 + s3a2 + pk2,
                 total: liquid + s3a + pk + liquid2 + s3a2 + pk2,
-            }
-            if (hasPerson2) {
-                point.liquid2 = liquid2
-                point.s3a2 = s3a2
-                point.pk2 = pk2
-            }
-            points.push(point)
+            })
         }
         return points
-    }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, currentLiquidAssets2, monthlyLiquidContribution2, current3aAssets2, monthly3aContribution2, currentPKAssets2, monthlyPKContribution2, months, language, hasPerson2, annualRateLiquid, annualRate3a, annualRatePK])
+    }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, currentLiquidAssets2, monthlyLiquidContribution2, current3aAssets2, monthly3aContribution2, currentPKAssets2, monthlyPKContribution2, months, locale, hasPerson2, annualRateLiquid, annualRate3a, annualRatePK])
+
+    const hasTargetMonth = targetMonthIndex !== undefined && targetMonthIndex >= 0 && targetMonthIndex < data.length
+
+    // Yearly rows plus the purchase month and the last projected month.
+    const tableRows = useMemo(() => {
+        const idx = new Set<number>()
+        for (let i = 0; i < data.length; i += 12) idx.add(i)
+        if (hasTargetMonth) idx.add(targetMonthIndex!)
+        if (data.length) idx.add(data.length - 1)
+        return [...idx].sort((a, b) => a - b).map((i) => ({ i, point: data[i] }))
+    }, [data, hasTargetMonth, targetMonthIndex])
 
     if (!data.length) return null
 
+    const atTarget = hasTargetMonth ? data[targetMonthIndex!] : data[data.length - 1]
+    const summary = t('charts.aria_summary', {
+        start: formatCHF(data[0].total, { decimals: 0 }),
+        end: formatCHF(atTarget.total, { decimals: 0 }),
+        date: atTarget.fullName,
+        target: formatCHF(targetAmount, { decimals: 0 }),
+    })
+
     return (
-        <div className={cn("w-full", className)}>
-            <style>{`
-                :root {
-                    --color-grid: #e2e8f0;
-                    --color-text: #64748b;
-                }
-                .dark {
-                    --color-grid: #334155;
-                    --color-text: #94a3b8;
-                }
-            `}</style>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                    data={data}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                >
-                    <defs>
-                        {Object.entries(COLORS).map(([key, color]) => (
-                            <linearGradient key={key} id={`color_${key}`} x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor={color} stopOpacity={0.35} />
-                                <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-                            </linearGradient>
-                        ))}
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-grid)" />
-                    <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 12, fill: 'var(--color-text)' }}
-                        tickLine={false}
-                        axisLine={false}
-                        interval="preserveStartEnd"
-                        minTickGap={30}
+        <figure className={cn('w-full', className)}>
+            <figcaption className="sr-only">{summary}</figcaption>
+
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t('charts.legend_label')}>
+                    {series.map((s) => (
+                        <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => toggleSeries(s.key)}
+                            aria-pressed={selected.has(s.key)}
+                            className={cn(
+                                'inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors',
+                                selected.has(s.key)
+                                    ? 'border-fg/30 bg-subtle text-fg'
+                                    : isActive(s.key)
+                                        ? 'border-border text-fg-secondary hover:bg-subtle hover:text-fg'
+                                        : 'border-border text-fg-muted opacity-60 hover:opacity-100',
+                            )}
+                        >
+                            <Swatch className={s.swatch} />
+                            {s.label}
+                        </button>
+                    ))}
+                </div>
+                {hasPerson2 && (
+                    <SegmentedControl<GroupBy>
+                        size="sm"
+                        ariaLabel={t('charts.group_by')}
+                        value={groupBy}
+                        onChange={(v) => {
+                            setGroupBy(v)
+                            setSelected(new Set())
+                        }}
+                        options={[
+                            { value: 'asset', label: t('charts.group_asset') },
+                            { value: 'person', label: t('charts.group_person') },
+                        ]}
                     />
-                    <YAxis
-                        tick={{ fontSize: 12, fill: 'var(--color-text)' }}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(value) => new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US', { notation: "compact" }).format(value)}
-                    />
-                    <Tooltip
-                        content={
-                            <CustomTooltip
-                                t={t}
-                                language={language}
-                                hasPerson2={hasPerson2}
-                                isFiltered={isFiltered}
-                                selectedSeries={selectedSeries}
-                                activeSeriesKeys={activeSeriesKeys}
-                                isSeriesSelected={isSeriesSelected}
+                )}
+            </div>
+
+            <div className="h-64 sm:h-72">
+                <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 288 }}>
+                    <AreaChart data={data} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
+                        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
+                        <XAxis
+                            dataKey="name"
+                            tick={{ fontSize: 12, fill: 'var(--fg-muted)' }}
+                            tickLine={false}
+                            axisLine={{ stroke: 'var(--input)' }}
+                            interval="preserveStartEnd"
+                            minTickGap={32}
+                            tickMargin={8}
+                        />
+                        <YAxis
+                            width="auto"
+                            tick={{ fontSize: 12, fill: 'var(--fg-muted)' }}
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={4}
+                            tickFormatter={(value: number) => formatCompact(value, language)}
+                        />
+                        <Tooltip
+                            cursor={{ stroke: 'var(--fg-muted)', strokeWidth: 1 }}
+                            content={<ChartTooltip series={series} totalLabel={t('charts.label_total')} />}
+                        />
+                        {series.map((s) => (
+                            <Area
+                                key={s.key}
+                                type="monotone"
+                                dataKey={s.key}
+                                name={s.label}
+                                stackId="1"
+                                stroke={s.color}
+                                strokeWidth={2}
+                                strokeOpacity={isActive(s.key) ? 1 : 0.25}
+                                fill={s.color}
+                                fillOpacity={isActive(s.key) ? 0.14 : 0.03}
+                                activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--surface)' }}
+                                isAnimationActive={!reduceMotion}
                             />
-                        }
-                    />
-                    {BASE_SERIES_KEYS.map((key) => (
-                        <Area key={key} type="monotone" dataKey={key} stackId="1"
-                            stroke={COLORS[key]}
-                            strokeWidth={isSeriesSelected(key) ? 2.5 : 1.25}
-                            strokeOpacity={isSeriesSelected(key) ? 1 : 0.25}
-                            fill={`url(#color_${key})`}
-                            fillOpacity={isSeriesSelected(key) ? 1 : 0.08}
-                            name={key}
-                        />
-                    ))}
-                    {hasPerson2 && PERSON2_SERIES_KEYS.map((key) => (
-                        <Area key={key} type="monotone" dataKey={key} stackId="1"
-                            stroke={COLORS[key]}
-                            strokeWidth={isSeriesSelected(key) ? 2.5 : 1.25}
-                            strokeOpacity={isSeriesSelected(key) ? 1 : 0.25}
-                            fill={`url(#color_${key})`}
-                            fillOpacity={isSeriesSelected(key) ? 1 : 0.08}
-                            name={key}
-                        />
-                    ))}
-                    {targetAmount > 0 && (
-                        <ReferenceLine
-                            y={targetAmount}
-                            stroke="#ef4444"
-                            strokeDasharray="4 4"
-                            strokeWidth={1.5}
-                            ifOverflow="extendDomain"
-                            label={{
-                                value: `${t('charts.label_target')} ${new Intl.NumberFormat(language === 'de' ? 'de-CH' : 'en-US', { notation: 'compact' }).format(targetAmount)}`,
-                                position: 'insideTopLeft',
-                                fill: '#ef4444',
-                                fontSize: 11,
-                                fontWeight: 600,
-                            }}
-                        />
-                    )}
-                    {targetMonthIndex !== undefined && targetMonthIndex >= 0 && targetMonthIndex < data.length && (
-                        <ReferenceLine
-                            x={data[targetMonthIndex].name as string}
-                            stroke="#94a3b8"
-                            strokeDasharray="3 3"
-                            strokeWidth={1.5}
-                            label={{
-                                value: t('charts.label_target_month'),
-                                position: 'insideTopRight',
-                                fill: '#64748b',
-                                fontSize: 11,
-                                fontWeight: 500,
-                            }}
-                        />
-                    )}
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            {/* Legend */}
-            <div className="mt-4 space-y-2">
-                {legendRows.map((row, rowIndex) => (
-                    <div
-                        key={rowIndex}
-                        className={cn(
-                            'flex justify-center gap-x-5 gap-y-2',
-                            hasPerson2 ? 'flex-col sm:flex-row' : 'flex-wrap',
-                        )}
-                    >
-                        {row.map((key) => (
-                            <button
-                                key={key}
-                                type="button"
-                                onClick={() => toggleSeries(key)}
-                                className={cn(
-                                    'flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs transition-colors',
-                                    isSeriesSelected(key)
-                                        ? 'border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200'
-                                        : 'border-transparent bg-transparent text-slate-400 dark:text-slate-500',
-                                )}
-                                aria-pressed={selectedSeries.has(key)}
-                            >
-                                <div
-                                    className="h-2.5 w-2.5 rounded-full"
-                                    style={{ backgroundColor: COLORS[key], opacity: isSeriesSelected(key) ? 1 : 0.45 }}
-                                />
-                                <span>{legendLabelByKey[key]}</span>
-                            </button>
                         ))}
-                    </div>
-                ))}
+                        {targetAmount > 0 && (
+                            <ReferenceLine
+                                y={targetAmount}
+                                stroke="var(--fg-secondary)"
+                                strokeDasharray="4 4"
+                                strokeWidth={1.5}
+                                ifOverflow="extendDomain"
+                                label={{
+                                    value: `${t('charts.label_target')} ${formatCompact(targetAmount, language)}`,
+                                    position: 'insideTopLeft',
+                                    fill: 'var(--fg-secondary)',
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    dy: -14,
+                                }}
+                            />
+                        )}
+                        {hasTargetMonth && (
+                            <ReferenceLine
+                                x={data[targetMonthIndex!].name}
+                                stroke="var(--fg-muted)"
+                                strokeDasharray="3 3"
+                                label={{
+                                    value: t('charts.label_target_month'),
+                                    position: 'insideTopRight',
+                                    fill: 'var(--fg-muted)',
+                                    fontSize: 11,
+                                    fontWeight: 500,
+                                }}
+                            />
+                        )}
+                    </AreaChart>
+                </ResponsiveContainer>
             </div>
-        </div>
+
+            <Disclosure summary={t('charts.table_toggle')} className="mt-4">
+                <div className="overflow-x-auto rounded-xl border border-border">
+                    <table className="w-full text-right text-xs tabular-nums">
+                        <thead className="bg-subtle text-fg-secondary">
+                            <tr>
+                                <th scope="col" className="px-3 py-2 text-left font-medium">{t('charts.table_date')}</th>
+                                {series.map((s) => (
+                                    <th key={s.key} scope="col" className="px-3 py-2 font-medium">{s.label}</th>
+                                ))}
+                                <th scope="col" className="px-3 py-2 font-medium">{t('charts.label_total')}</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border text-fg">
+                            {tableRows.map(({ i, point }) => (
+                                <tr key={i} className={cn(i === targetMonthIndex && 'bg-subtle/60 font-medium')}>
+                                    <th scope="row" className="whitespace-nowrap px-3 py-2 text-left font-normal text-fg-secondary">
+                                        {point.fullName}
+                                        {i === targetMonthIndex && <span className="ml-1.5 text-fg-muted">· {t('charts.label_target_month')}</span>}
+                                    </th>
+                                    {series.map((s) => (
+                                        <td key={s.key} className="whitespace-nowrap px-3 py-2">{formatCHF(point[s.key], { decimals: 0 })}</td>
+                                    ))}
+                                    <td className="whitespace-nowrap px-3 py-2 font-medium">{formatCHF(point.total, { decimals: 0 })}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </Disclosure>
+        </figure>
     )
 }

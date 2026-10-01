@@ -30,11 +30,15 @@ Single-page React + Vite app. All state lives in `App.tsx` (`AppContent`); there
 
 **i18n:** Custom context in `src/i18n/`. `useLanguage()` hook exposes `t(key, params?)`. All strings go through `translations.ts`. Default language is German (`de`).
 
-**Theme:** Light/dark via `ThemeProvider` (wraps the app) + `ThemeToggle`. Storage key: `vite-ui-theme`.
+**Design tokens:** Semantic colors are CSS variables in `src/index.css` (`:root` / `.dark`) mapped to Tailwind utilities via `@theme inline` (`bg-surface`, `text-fg-muted`, `border-border`, `bg-chart-blue`, ...). Use these instead of raw palette classes (`slate-*`) so dark mode needs no `dark:` overrides. Shared primitives live in `src/components/ui.tsx`.
+
+**Theme:** Light/dark via `ThemeProvider` (wraps the app) + `ThemeToggle`. Defaults to the OS setting; storage key: `vite-ui-theme`. An inline script in `index.html` applies the class before first paint.
 
 **Two-person mode:** Person 2 assets are conditionally included in projections. Toggled via `person2Active` (localStorage persisted).
 
-**Wizard:** Modal overlay (`src/components/Wizard.tsx`) that mirrors all `AppContent` inputs. On complete, calls `handleWizardComplete` which sets all state in one shot.
+**Wizard:** Radix Dialog (`src/components/Wizard.tsx`) that mirrors the core `AppContent` inputs. On complete, calls `handleWizardComplete` which sets all state in one shot.
+
+**Layout:** Inputs left, `ResultSummary` in a sticky right column (`useStickyTop` keeps a tall panel reachable without a nested scrollbar), chart + affordability below. Below `lg`, `MobileSummaryBar` shows the headline number.
 
 ## Key files
 
@@ -43,9 +47,13 @@ Single-page React + Vite app. All state lives in `App.tsx` (`AppContent`); there
 | `src/App.tsx` | All state, derived calculations, layout |
 | `src/i18n/translations.ts` | All UI strings (DE + EN) |
 | `src/i18n/LanguageContext.tsx` | `useLanguage()` / `t()` |
-| `src/components/GrowthChart.tsx` | Stacked area chart; accepts optional `*2` props for person 2 |
-| `src/components/DonutChart.tsx` | Equity composition chart |
-| `src/components/SliderInput.tsx` | Shared slider + text input for money values |
+| `src/index.css` | Design tokens (light/dark, chart series, status) |
+| `src/components/ui.tsx` | Card, Button, SegmentedControl, Badge, Callout, InfoPopover, Disclosure |
+| `src/components/ResultSummary.tsx` | Sticky result panel: savings rate, equity bar, bank criteria |
+| `src/components/AffordabilityCard.tsx` | Tragbarkeit meter + breakdown |
+| `src/components/GrowthChart.tsx` | Stacked area chart (lazy-loaded); accepts optional `*2` props for person 2 |
+| `src/components/SliderInput.tsx` | Shared text input (CHF or %) with optional slider |
+| `src/lib/format.ts` | `parseMoney`, `formatCHF`, `formatNumber`, `formatCompact` |
 | `src/components/Wizard.tsx` | Step-by-step setup modal; exports `WizardValues` type |
 | `src/components/MonthPicker.tsx` | Custom month/year picker (Radix Popover) |
 

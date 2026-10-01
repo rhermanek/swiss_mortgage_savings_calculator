@@ -1,79 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-  AlertTriangle,
-  Banknote,
-  Calculator,
-  Check,
-  Coins,
-  Info,
-  Landmark,
-  LineChart,
-  PiggyBank,
-  Scale,
-  Target,
-  TrendingUp,
-  UserMinus,
-  UserPlus,
-  Wallet,
-  Wand2,
-  X,
-} from 'lucide-react'
-import * as PopoverPrimitive from '@radix-ui/react-popover'
-import { GrowthChart } from './components/GrowthChart'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, Lock, SlidersHorizontal, User, Users } from 'lucide-react'
+import { AffordabilityCard } from './components/AffordabilityCard'
+import { AppHeader } from './components/AppHeader'
+import { MobileSummaryBar } from './components/MobileSummaryBar'
 import { MonthPicker } from './components/MonthPicker'
+import { ResetButton } from './components/ResetButton'
+import { ResultSummary, type RuleStatus } from './components/ResultSummary'
 import { SliderInput } from './components/SliderInput'
 import { ThemeProvider } from './components/ThemeProvider'
-import { ThemeToggle } from './components/ThemeToggle'
+import { Card, CardBody, CardHeader, Disclosure, SegmentedControl } from './components/ui'
 import { Wizard, type WizardValues } from './components/Wizard'
-import logoUrl from './assets/logo.png'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { useLanguage } from './i18n/useLanguage'
-import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { formatCHF, formatNumber, parseMoney } from './lib/format'
+import { useStickyTop } from './lib/useStickyTop'
+
+// Recharts is the bulk of the bundle and the chart sits below the fold.
+const GrowthChart = lazy(() => import('./components/GrowthChart').then((m) => ({ default: m.GrowthChart })))
 
 // Helper utilities
 function clamp01(n: number) {
   if (!Number.isFinite(n)) return 0
   return Math.min(1, Math.max(0, n))
-}
-
-function roundTo2(n: number) {
-  return Math.round((n + Number.EPSILON) * 100) / 100
-}
-
-function parseMoney(raw: string): number {
-  const trimmed = raw.trim()
-  if (!trimmed) return 0
-
-  const normalized = trimmed
-    .replaceAll('’', "'")
-    .replaceAll(' ', '')
-    .replaceAll("'", '')
-    .replace(/[^\d,.-]/g, '')
-
-  const hasDot = normalized.includes('.')
-  const hasComma = normalized.includes(',')
-
-  let numStr = normalized
-  if (hasDot && hasComma) {
-    numStr = numStr.replaceAll(',', '')
-  } else if (!hasDot && hasComma) {
-    numStr = numStr.replaceAll(',', '.')
-  }
-
-  const n = Number.parseFloat(numStr)
-  return Number.isFinite(n) ? Math.max(0, n) : 0
-}
-
-function formatCHF(value: number, opts?: { decimals?: number }) {
-  const decimals = opts?.decimals ?? 2
-  const fmt = new Intl.NumberFormat('de-CH', {
-    style: 'currency',
-    currency: 'CHF',
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(value)
-
-  return fmt.replaceAll('’', "'").replaceAll('\u00A0', ' ')
 }
 
 function monthsBetweenNowAndTargetMonth(targetYYYYMM: string): number {
@@ -95,12 +43,8 @@ function monthsBetweenNowAndTargetMonth(targetYYYYMM: string): number {
   return Math.max(0, months)
 }
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ')
-}
-
 function clampNum(value: string, min: number, max: number, fallback: number) {
-  const n = Number.parseFloat(value)
+  const n = Number.parseFloat(value.replace(',', '.'))
   if (!Number.isFinite(n)) return fallback
   return Math.min(max, Math.max(min, n))
 }
@@ -115,212 +59,101 @@ function projectCompound(principal: number, monthly: number, annualRate: number,
   return principal * factor + monthly * (factor - 1) / r
 }
 
+// Default: 24 months in the future
+function defaultTargetMonth() {
+  const now = new Date()
+  const target = new Date(now.getFullYear(), now.getMonth() + 24, 1)
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}`
+}
+
+const DEFAULTS = {
+  kaufpreis: "800'000",
+  barvermoegen: "40'000",
+  saeule3a: "30'000",
+  pensionskasse: "60'000",
+  andereVermoegen: "10'000",
+  saeule3aMonatlich: '500',
+  pensionskasseMonatlich: '0',
+  sonstigeSparrateMonatlich: '0',
+  bruttoeinkommen: '0',
+  bruttoeinkommen2: '0',
+  equityPct: '20',
+  softEquityPct: '10',
+  growthRateLiquid: '0',
+  growthRate3a: '0',
+  growthRatePK: '0',
+  barvermoegen2: '0',
+  saeule3a2: '0',
+  pensionskasse2: '0',
+  andereVermoegen2: '0',
+  saeule3aMonatlich2: '0',
+  pensionskasseMonatlich2: '0',
+  sonstigeSparrateMonatlich2: '0',
+} as const
+
+type PersistedKey = keyof typeof DEFAULTS
+
+// localStorage-backed string state
+function usePersistentState(key: PersistedKey) {
+  const [state, setState] = useState(() => localStorage.getItem(key) ?? DEFAULTS[key])
+
+  useEffect(() => {
+    localStorage.setItem(key, state)
+  }, [key, state])
+
+  return [state, setState] as const
+}
+
 const PILLAR_3A_ANNUAL_CAP = 7258 // CHF, "kleine Säule 3a" with PK (2025 reference)
 
-function Card(props: React.PropsWithChildren<{ className?: string }>) {
-  return (
-    <div
-      className={cx(
-        'rounded-2xl border border-slate-200 bg-white shadow-lg',
-        props.className,
-      )}
-    >
-      {props.children}
-    </div>
-  )
-}
-
-function CardHeader(props: React.PropsWithChildren<{ className?: string }>) {
-  return (
-    <div className={cx('border-b border-slate-200 px-5 py-4', props.className)}>
-      {props.children}
-    </div>
-  )
-}
-
-function CardContent(props: React.PropsWithChildren<{ className?: string }>) {
-  return <div className={cx('px-5 py-6', props.className)}>{props.children}</div>
-}
-
-// Colored icon badge + title (+ optional step number) used in every card header.
-// Makes the tool more scannable and guides new users through the input sequence.
-function CardTitleRow({
-  icon,
-  tone,
-  step,
-  title,
-  desc,
-  children,
-}: {
-  icon: React.ReactNode
-  tone: string
-  step?: number
-  title: string
-  desc?: React.ReactNode
-  children?: React.ReactNode
-}) {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex min-w-0 items-start gap-3">
-        <div
-          className={cx(
-            'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-            tone,
-          )}
-        >
-          {icon}
-          {step != null && (
-            <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-bold text-white ring-2 ring-white dark:bg-slate-100 dark:text-slate-900 dark:ring-slate-900">
-              {step}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0">
-          <div className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</div>
-          {desc != null && (
-            <div className="text-sm text-slate-500 dark:text-slate-400">{desc}</div>
-          )}
-        </div>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function Label(props: React.PropsWithChildren<{ htmlFor: string }>) {
-  return (
-    <label htmlFor={props.htmlFor} className="text-sm font-medium text-slate-800 dark:text-slate-200">
-      {props.children}
-    </label>
-  )
-}
-
-function PersonTabs({
-  personTab,
-  setPersonTab,
-  t,
-}: {
-  personTab: '1' | '2'
-  setPersonTab: (v: '1' | '2') => void
-  t: (key: string, params?: Record<string, string | number>) => string
-}) {
-  const base = 'flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors'
-  const active = 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm'
-  const inactive = 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-  return (
-    <div role="tablist" className="flex flex-1 items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800/60 p-1">
-      <button
-        type="button"
-        role="tab"
-        aria-selected={personTab === '1'}
-        onClick={() => setPersonTab('1')}
-        className={cx(base, personTab === '1' ? active : inactive)}
-      >
-        {t('app.person1_section')}
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={personTab === '2'}
-        onClick={() => setPersonTab('2')}
-        className={cx(base, personTab === '2' ? active : inactive)}
-      >
-        {t('app.person2_section')}
-      </button>
-    </div>
-  )
-}
-
-function Pill({
-  tone,
-  children,
-}: React.PropsWithChildren<{ tone: 'ok' | 'warn' | 'info' }>) {
-  const styles =
-    tone === 'ok'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-200'
-      : tone === 'warn'
-        ? 'border-amber-200 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-200'
-        : 'border-slate-200 bg-slate-50 text-slate-800 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-200'
-  return (
-    <span
-      className={cx(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium',
-        styles,
-      )}
-    >
-      {children}
-    </span>
-  )
-}
+const TRAGBARKEIT_INTEREST_RATE = 0.05
+const TRAGBARKEIT_MAINTENANCE_RATE = 0.01
+const TRAGBARKEIT_AMORT_TARGET_LTV = 0.65
+const TRAGBARKEIT_AMORT_YEARS = 15
+const TRAGBARKEIT_MAX_RATIO = 1 / 3
 
 function AppContent() {
   const { t, language } = useLanguage()
 
-  // helper hook for local storage persistence
-  function usePersistentState(key: string, initialValue: string) {
-    const [state, setState] = useState(() => {
-      const stored = localStorage.getItem(key)
-      return stored ?? initialValue
-    })
-
-    useEffect(() => {
-      localStorage.setItem(key, state)
-    }, [key, state])
-
-    return [state, setState] as const
-  }
-
   // State with persistence
-  const [kaufpreis, setKaufpreis] = usePersistentState('kaufpreis', "800'000")
+  const [kaufpreis, setKaufpreis] = usePersistentState('kaufpreis')
 
-  // Custom logic for zielMonat
-  const [zielMonat, setZielMonat] = useState<string>(() => {
-    const stored = localStorage.getItem('zielMonat')
-    if (stored) return stored
-
-    // Default: 24 months in the future
-    const now = new Date()
-    const target = new Date(now.getFullYear(), now.getMonth() + 24, 1)
-    const yyyy = target.getFullYear()
-    const mm = String(target.getMonth() + 1).padStart(2, '0')
-    return `${yyyy}-${mm}`
-  })
+  const [zielMonat, setZielMonat] = useState<string>(() => localStorage.getItem('zielMonat') || defaultTargetMonth())
 
   useEffect(() => {
     localStorage.setItem('zielMonat', zielMonat)
   }, [zielMonat])
 
-  const [barvermoegen, setBarvermoegen] = usePersistentState('barvermoegen', "40'000")
-  const [saeule3a, setSaeule3a] = usePersistentState('saeule3a', "30'000")
-  const [pensionskasse, setPensionskasse] = usePersistentState('pensionskasse', "60'000")
-  const [andereVermoegen, setAndereVermoegen] = usePersistentState('andereVermoegen', "10'000")
+  const [barvermoegen, setBarvermoegen] = usePersistentState('barvermoegen')
+  const [saeule3a, setSaeule3a] = usePersistentState('saeule3a')
+  const [pensionskasse, setPensionskasse] = usePersistentState('pensionskasse')
+  const [andereVermoegen, setAndereVermoegen] = usePersistentState('andereVermoegen')
 
   const [isWizardOpen, setIsWizardOpen] = useState(false)
-  const [confirmRemovePartner, setConfirmRemovePartner] = useState(false)
   const [personTab, setPersonTab] = useState<'1' | '2'>('1')
 
-  const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich', '500')
-  const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich', '0')
-  const [sonstigeSparrateMonatlich, setSonstigeSparrateMonatlich] = usePersistentState('sonstigeSparrateMonatlich', '0')
-  const [bruttoeinkommen, setBruttoeinkommen] = usePersistentState('bruttoeinkommen', '0')
-  const [bruttoeinkommen2, setBruttoeinkommen2] = usePersistentState('bruttoeinkommen2', '0')
+  const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich')
+  const [pensionskasseMonatlich, setPensionskasseMonatlich] = usePersistentState('pensionskasseMonatlich')
+  const [sonstigeSparrateMonatlich, setSonstigeSparrateMonatlich] = usePersistentState('sonstigeSparrateMonatlich')
+  const [bruttoeinkommen, setBruttoeinkommen] = usePersistentState('bruttoeinkommen')
+  const [bruttoeinkommen2, setBruttoeinkommen2] = usePersistentState('bruttoeinkommen2')
 
-  const [equityPct, setEquityPct] = usePersistentState('equityPct', '20')
-  const [softEquityPct, setSoftEquityPct] = usePersistentState('softEquityPct', '10')
-  const [growthRateLiquid, setGrowthRateLiquid] = usePersistentState('growthRateLiquid', '0')
-  const [growthRate3a, setGrowthRate3a] = usePersistentState('growthRate3a', '0')
-  const [growthRatePK, setGrowthRatePK] = usePersistentState('growthRatePK', '0')
+  const [equityPct, setEquityPct] = usePersistentState('equityPct')
+  const [softEquityPct, setSoftEquityPct] = usePersistentState('softEquityPct')
+  const [growthRateLiquid, setGrowthRateLiquid] = usePersistentState('growthRateLiquid')
+  const [growthRate3a, setGrowthRate3a] = usePersistentState('growthRate3a')
+  const [growthRatePK, setGrowthRatePK] = usePersistentState('growthRatePK')
 
   // Person 2
   const [person2Active, setPerson2Active] = useState(() => localStorage.getItem('person2Active') === 'true')
   useEffect(() => { localStorage.setItem('person2Active', String(person2Active)) }, [person2Active])
-  const [barvermoegen2, setBarvermoegen2] = usePersistentState('barvermoegen2', '0')
-  const [saeule3a2, setSaeule3a2] = usePersistentState('saeule3a2', '0')
-  const [pensionskasse2, setPensionskasse2] = usePersistentState('pensionskasse2', '0')
-  const [andereVermoegen2, setAndereVermoegen2] = usePersistentState('andereVermoegen2', '0')
-  const [saeule3aMonatlich2, setSaeule3aMonatlich2] = usePersistentState('saeule3aMonatlich2', '0')
-  const [pensionskasseMonatlich2, setPensionskasseMonatlich2] = usePersistentState('pensionskasseMonatlich2', '0')
-  const [sonstigeSparrateMonatlich2, setSonstigeSparrateMonatlich2] = usePersistentState('sonstigeSparrateMonatlich2', '0')
+  const [barvermoegen2, setBarvermoegen2] = usePersistentState('barvermoegen2')
+  const [saeule3a2, setSaeule3a2] = usePersistentState('saeule3a2')
+  const [pensionskasse2, setPensionskasse2] = usePersistentState('pensionskasse2')
+  const [andereVermoegen2, setAndereVermoegen2] = usePersistentState('andereVermoegen2')
+  const [saeule3aMonatlich2, setSaeule3aMonatlich2] = usePersistentState('saeule3aMonatlich2')
+  const [pensionskasseMonatlich2, setPensionskasseMonatlich2] = usePersistentState('pensionskasseMonatlich2')
+  const [sonstigeSparrateMonatlich2, setSonstigeSparrateMonatlich2] = usePersistentState('sonstigeSparrateMonatlich2')
 
   const handleWizardComplete = (values: WizardValues) => {
     setKaufpreis(values.kaufpreis)
@@ -340,6 +173,34 @@ function AppContent() {
     setSaeule3aMonatlich2(values.saeule3aMonatlich2)
     setPensionskasseMonatlich2(values.pensionskasseMonatlich2)
     setSonstigeSparrateMonatlich2(values.sonstigeSparrateMonatlich2)
+  }
+
+  const handleReset = () => {
+    setKaufpreis(DEFAULTS.kaufpreis)
+    setZielMonat(defaultTargetMonth())
+    setBarvermoegen(DEFAULTS.barvermoegen)
+    setSaeule3a(DEFAULTS.saeule3a)
+    setPensionskasse(DEFAULTS.pensionskasse)
+    setAndereVermoegen(DEFAULTS.andereVermoegen)
+    setSaeule3aMonatlich(DEFAULTS.saeule3aMonatlich)
+    setPensionskasseMonatlich(DEFAULTS.pensionskasseMonatlich)
+    setSonstigeSparrateMonatlich(DEFAULTS.sonstigeSparrateMonatlich)
+    setBruttoeinkommen(DEFAULTS.bruttoeinkommen)
+    setBruttoeinkommen2(DEFAULTS.bruttoeinkommen2)
+    setEquityPct(DEFAULTS.equityPct)
+    setSoftEquityPct(DEFAULTS.softEquityPct)
+    setGrowthRateLiquid(DEFAULTS.growthRateLiquid)
+    setGrowthRate3a(DEFAULTS.growthRate3a)
+    setGrowthRatePK(DEFAULTS.growthRatePK)
+    setPerson2Active(false)
+    setPersonTab('1')
+    setBarvermoegen2(DEFAULTS.barvermoegen2)
+    setSaeule3a2(DEFAULTS.saeule3a2)
+    setPensionskasse2(DEFAULTS.pensionskasse2)
+    setAndereVermoegen2(DEFAULTS.andereVermoegen2)
+    setSaeule3aMonatlich2(DEFAULTS.saeule3aMonatlich2)
+    setPensionskasseMonatlich2(DEFAULTS.pensionskasseMonatlich2)
+    setSonstigeSparrateMonatlich2(DEFAULTS.sonstigeSparrateMonatlich2)
   }
 
   const kaufpreisN = useMemo(() => parseMoney(kaufpreis), [kaufpreis])
@@ -400,10 +261,7 @@ function AppContent() {
   const pkProjected = useMemo(() => pkProjected1 + pkProjected2, [pkProjected1, pkProjected2])
   const otherProjected = useMemo(() => otherProjected1 + otherProjected2, [otherProjected1, otherProjected2])
 
-  const totalAssetsAtTarget = useMemo(
-    () => (barN + barN2) + otherProjected + s3aProjected + pkProjected,
-    [barN, barN2, otherProjected, pkProjected, s3aProjected],
-  )
+  const liquidAtTarget = barN + barN2 + otherProjected
   const hardAssetsAtTarget = useMemo(
     () => (barN + barN2) + otherProjected + s3aProjected,
     [barN, barN2, otherProjected, s3aProjected],
@@ -476,25 +334,16 @@ function AppContent() {
   // Progress bar segments — soft capped at the legal/user soft limit, hard fills the rest
   const softCapped = Math.min(pkProjected, softMaxAllowed)
   const hardCapped = Math.min(hardAssetsAtTarget, Math.max(0, totalRequired - softCapped))
+  const liquidCapped = Math.min(liquidAtTarget, hardCapped)
   const gapDisplay = Math.max(0, totalRequired - hardCapped - softCapped)
-  const pct = (n: number) => (totalRequired > 0 ? (n / totalRequired) * 100 : 0)
 
   // Today's totals (sum of person 1 + 2 current values, before projection)
-  const todayHardTotal = barN + barN2 + s3aN + s3aN2 + otherN + otherN2
-  const todaySoftTotal = pkN + pkN2
-  const todayTotal = todayHardTotal + todaySoftTotal
-  const todayPct = totalRequired > 0 ? Math.min(100, (todayTotal / totalRequired) * 100) : 0
+  const todayTotal = barN + barN2 + s3aN + s3aN2 + otherN + otherN2 + pkN + pkN2
 
   // Tragbarkeit (Swiss affordability check)
   const incomeN = useMemo(() => parseMoney(bruttoeinkommen), [bruttoeinkommen])
   const incomeN2 = useMemo(() => person2Active ? parseMoney(bruttoeinkommen2) : 0, [person2Active, bruttoeinkommen2])
   const totalIncome = incomeN + incomeN2
-
-  const TRAGBARKEIT_INTEREST_RATE = 0.05
-  const TRAGBARKEIT_MAINTENANCE_RATE = 0.01
-  const TRAGBARKEIT_AMORT_TARGET_LTV = 0.65
-  const TRAGBARKEIT_AMORT_YEARS = 15
-  const TRAGBARKEIT_MAX_RATIO = 1 / 3
 
   const mortgageAmount = useMemo(() => kaufpreisN * (1 - equityPctN / 100), [equityPctN, kaufpreisN])
   const annualInterest = useMemo(() => mortgageAmount * TRAGBARKEIT_INTEREST_RATE, [mortgageAmount])
@@ -509,399 +358,271 @@ function AppContent() {
   const tragbarkeitRatio = totalIncome > 0 ? annualHousingCost / totalIncome : 0
   const tragbarkeitPasses = totalIncome > 0 && tragbarkeitRatio <= TRAGBARKEIT_MAX_RATIO
   const requiredIncome = annualHousingCost / TRAGBARKEIT_MAX_RATIO
+  const tragbarkeitStatus: RuleStatus = !priceValid || totalIncome <= 0 ? 'pending' : tragbarkeitPasses ? 'pass' : 'fail'
+
+  const asideRef = useRef<HTMLElement>(null)
+  const stickyTop = useStickyTop(asideRef, 80)
+
+  const showP2 = person2Active && personTab === '2'
+  const pctLabel = (n: number) => formatNumber(n, 1)
+
+  const setHousehold = (value: 'single' | 'couple') => {
+    const on = value === 'couple'
+    setPerson2Active(on)
+    setPersonTab(on ? '2' : '1')
+  }
+
+  const personSwitch = person2Active ? (
+    <SegmentedControl<'1' | '2'>
+      className="w-full sm:col-span-2"
+      ariaLabel={t('app.person_switch_label')}
+      value={personTab}
+      onChange={setPersonTab}
+      options={[
+        { value: '1', label: t('app.person1_section'), icon: <User aria-hidden="true" /> },
+        { value: '2', label: t('app.person2_section'), icon: <User aria-hidden="true" /> },
+      ]}
+    />
+  ) : null
+
+  const s3aMonthlyShown = showP2 ? s3aMonthlyN2 : s3aMonthlyN
+  const s3aCapWarning = s3aMonthlyShown * 12 > PILLAR_3A_ANNUAL_CAP
+    ? t('app.warning_3a_cap', { cap: formatCHF(PILLAR_3A_ANNUAL_CAP, { decimals: 0 }), current: formatCHF(s3aMonthlyShown * 12, { decimals: 0 }) })
+    : undefined
 
   return (
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <div className="min-h-screen pb-20 font-sans text-slate-900 bg-slate-50 dark:bg-slate-950 dark:text-slate-50 transition-colors duration-300">
-        <div className="mx-auto w-full max-w-7xl px-4 py-10">
-          <div className="mb-6 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <img src={logoUrl} alt="" className="h-10 sm:h-12 w-auto shrink-0 drop-shadow-[0_2px_3px_rgba(0,0,0,0.25)]" />
-              <div className="flex flex-col min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50 leading-tight">
-                  {t('app.title')}
-                </h1>
-                <div className="flex items-center gap-1">
-                  <span className="hidden sm:inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                    <Landmark className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{t('app.badge_rules')}</span>
-                  </span>
-                  <PopoverPrimitive.Root>
-                    <PopoverPrimitive.Trigger asChild>
-                      <button
-                        aria-label={t('app.info_rules_title')}
-                        className="rounded-full p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
-                      >
-                        <Info className="h-3.5 w-3.5" />
-                      </button>
-                    </PopoverPrimitive.Trigger>
-                    <PopoverPrimitive.Portal>
-                      <PopoverPrimitive.Content
-                        side="bottom"
-                        align="start"
-                        sideOffset={6}
-                        className="z-50 max-w-xs rounded-xl border border-slate-200 bg-white p-4 shadow-xl outline-none dark:bg-slate-900 dark:border-slate-800"
-                      >
-                        <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3 text-sm">{t('app.info_rules_title')}</h3>
-                        <div className="space-y-3 text-xs text-slate-600 dark:text-slate-400">
-                          <div>
-                            <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_20pct')}</div>
-                            <div>{t('app.info_rules_20pct_desc')}</div>
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_10pct')}</div>
-                            <div>{t('app.info_rules_10pct_desc')}</div>
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-800 dark:text-slate-200 mb-0.5">{t('app.info_rules_soft')}</div>
-                            <div>{t('app.info_rules_soft_desc')}</div>
-                          </div>
-                        </div>
-                        <PopoverPrimitive.Arrow className="fill-white dark:fill-slate-900" />
-                      </PopoverPrimitive.Content>
-                    </PopoverPrimitive.Portal>
-                  </PopoverPrimitive.Root>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setIsWizardOpen(true)}
-                aria-label={t('app.btn_wizard')}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium shadow-md shadow-blue-600/20 hover:shadow-lg hover:shadow-blue-600/30 transition-all whitespace-nowrap"
-              >
-                <Wand2 className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('app.btn_wizard')}</span>
-              </button>
-              <LanguageSwitcher />
-              <ThemeToggle />
-            </div>
-          </div>
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <div className="min-h-dvh bg-background text-fg">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
+        >
+          {t('app.skip_to_content')}
+        </a>
 
-          <Wizard
-            isOpen={isWizardOpen}
-            onClose={() => setIsWizardOpen(false)}
-            onComplete={handleWizardComplete}
-            initialValues={{
-              kaufpreis,
-              zielMonat,
-              barvermoegen,
-              saeule3a,
-              pensionskasse,
-              andereVermoegen,
-              saeule3aMonatlich,
-              pensionskasseMonatlich,
-              sonstigeSparrateMonatlich,
-              person2Active,
-              barvermoegen2,
-              saeule3a2,
-              pensionskasse2,
-              andereVermoegen2,
-              saeule3aMonatlich2,
-              pensionskasseMonatlich2,
-              sonstigeSparrateMonatlich2,
-            }}
-          />
+        <AppHeader onOpenWizard={() => setIsWizardOpen(true)} />
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* Left Column: Inputs */}
-            <div className="space-y-8">
-              <Card className="dark:bg-slate-900 dark:border-slate-800">
-                <CardHeader className="dark:border-slate-800">
-                  <CardTitleRow
-                    step={1}
-                    tone="bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300"
-                    icon={<Target className="h-5 w-5" />}
-                    title={t('app.card_obj_title')}
-                    desc={t('app.card_obj_desc')}
-                  />
-                </CardHeader>
+        <Wizard
+          isOpen={isWizardOpen}
+          onClose={() => setIsWizardOpen(false)}
+          onComplete={handleWizardComplete}
+          initialValues={{
+            kaufpreis,
+            zielMonat,
+            barvermoegen,
+            saeule3a,
+            pensionskasse,
+            andereVermoegen,
+            saeule3aMonatlich,
+            pensionskasseMonatlich,
+            sonstigeSparrateMonatlich,
+            person2Active,
+            barvermoegen2,
+            saeule3a2,
+            pensionskasse2,
+            andereVermoegen2,
+            saeule3aMonatlich2,
+            pensionskasseMonatlich2,
+            sonstigeSparrateMonatlich2,
+          }}
+        />
 
-                <CardContent className="space-y-8">
+        <main id="main" className="mx-auto w-full max-w-7xl px-4 pb-32 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8">
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_440px]">
+            {/* Inputs */}
+            <div className="min-w-0 space-y-6">
+              <Card aria-labelledby="sec-objekt">
+                <CardHeader id="sec-objekt" step={1} title={t('app.card_obj_title')} description={t('app.card_obj_desc')} />
+                <CardBody className="grid gap-5 sm:grid-cols-2">
                   <SliderInput
                     id="kaufpreis"
                     label={t('app.label_kaufpreis')}
                     value={kaufpreis}
                     onChange={setKaufpreis}
                     min={0}
-                    max={10000000}
+                    max={5000000}
                     step={10000}
-                    icon={<Coins className="h-4 w-4" />}
                   />
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="zielmonat">{t('app.label_zielmonat')}</Label>
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{monthsRemaining} {t('app.months_remaining')}</span>
+                  <div className="space-y-1.5">
+                    <div className="flex min-h-5 items-baseline justify-between gap-3">
+                      <label htmlFor="zielmonat" className="text-sm font-medium text-fg">{t('app.label_zielmonat')}</label>
+                      <span className="text-xs tabular-nums text-fg-muted">{t('app.months_until', { n: monthsRemaining })}</span>
                     </div>
-                    <MonthPicker
-                      value={zielMonat}
-                      onChange={setZielMonat}
-                      hasError={invalidDate}
+                    <MonthPicker id="zielmonat" value={zielMonat} onChange={setZielMonat} hasError={invalidDate} />
+                  </div>
+                </CardBody>
+              </Card>
+
+              <Card aria-labelledby="sec-assets">
+                <CardHeader
+                  id="sec-assets"
+                  step={2}
+                  title={t('app.card_assets_title')}
+                  description={t('app.card_assets_desc')}
+                  action={
+                    <SegmentedControl<'single' | 'couple'>
+                      size="sm"
+                      ariaLabel={t('app.household_label')}
+                      value={person2Active ? 'couple' : 'single'}
+                      onChange={setHousehold}
+                      options={[
+                        { value: 'single', label: t('app.household_single'), icon: <User aria-hidden="true" /> },
+                        { value: 'couple', label: t('app.household_couple'), icon: <Users aria-hidden="true" /> },
+                      ]}
+                    />
+                  }
+                />
+                <CardBody className="grid gap-5 sm:grid-cols-2">
+                  {personSwitch}
+                  <SliderInput
+                    key={`bar-${personTab}`}
+                    id={showP2 ? 'barvermoegen2' : 'barvermoegen'}
+                    label={t('app.label_bar')}
+                    value={showP2 ? barvermoegen2 : barvermoegen}
+                    onChange={showP2 ? setBarvermoegen2 : setBarvermoegen}
+                    max={500000}
+                    step={1000}
+                  />
+                  <SliderInput
+                    key={`3a-${personTab}`}
+                    id={showP2 ? 'saeule3a2' : 'saeule3a'}
+                    label={t('app.label_3a')}
+                    value={showP2 ? saeule3a2 : saeule3a}
+                    onChange={showP2 ? setSaeule3a2 : setSaeule3a}
+                    max={200000}
+                    step={1000}
+                  />
+                  <SliderInput
+                    key={`pk-${personTab}`}
+                    id={showP2 ? 'pensionskasse2' : 'pensionskasse'}
+                    label={t('app.label_pk')}
+                    value={showP2 ? pensionskasse2 : pensionskasse}
+                    onChange={showP2 ? setPensionskasse2 : setPensionskasse}
+                    max={1000000}
+                    step={1000}
+                    hint={t('app.hint_pk')}
+                  />
+                  <SliderInput
+                    key={`other-${personTab}`}
+                    id={showP2 ? 'andere2' : 'andere'}
+                    label={t('app.label_other')}
+                    value={showP2 ? andereVermoegen2 : andereVermoegen}
+                    onChange={showP2 ? setAndereVermoegen2 : setAndereVermoegen}
+                    max={200000}
+                    step={1000}
+                    hint={t('app.hint_other')}
+                  />
+                </CardBody>
+              </Card>
+
+              <Card aria-labelledby="sec-monthly">
+                <CardHeader id="sec-monthly" step={3} title={t('app.card_monthly_title')} description={t('app.card_monthly_desc')} />
+                <CardBody className="grid gap-5 sm:grid-cols-2">
+                  {personSwitch}
+                  <SliderInput
+                    key={`3a-mt-${personTab}`}
+                    id={showP2 ? 'saeule3aMonatlich2' : 'saeule3aMonatlich'}
+                    label={t('app.label_3a_monthly')}
+                    value={showP2 ? saeule3aMonatlich2 : saeule3aMonatlich}
+                    onChange={showP2 ? setSaeule3aMonatlich2 : setSaeule3aMonatlich}
+                    max={3000}
+                    step={50}
+                    warning={s3aCapWarning}
+                  />
+                  <SliderInput
+                    key={`pk-mt-${personTab}`}
+                    id={showP2 ? 'pensionskasseMonatlich2' : 'pensionskasseMonatlich'}
+                    label={t('app.label_pk_monthly')}
+                    value={showP2 ? pensionskasseMonatlich2 : pensionskasseMonatlich}
+                    onChange={showP2 ? setPensionskasseMonatlich2 : setPensionskasseMonatlich}
+                    max={5000}
+                    step={50}
+                    hint={t('app.hint_pk_monthly')}
+                  />
+                  <SliderInput
+                    key={`other-mt-${personTab}`}
+                    id={showP2 ? 'sonstigeSparrateMonatlich2' : 'sonstigeSparrateMonatlich'}
+                    label={t('app.label_other_monthly')}
+                    value={showP2 ? sonstigeSparrateMonatlich2 : sonstigeSparrateMonatlich}
+                    onChange={showP2 ? setSonstigeSparrateMonatlich2 : setSonstigeSparrateMonatlich}
+                    max={20000}
+                    step={50}
+                    hint={t('app.hint_other_monthly')}
+                  />
+                </CardBody>
+              </Card>
+
+              <Card aria-labelledby="sec-income">
+                <CardHeader id="sec-income" step={4} title={t('app.card_income_title')} description={t('app.card_income_desc')} />
+                <CardBody className="grid gap-5 sm:grid-cols-2">
+                  {personSwitch}
+                  <SliderInput
+                    key={`income-${personTab}`}
+                    id={showP2 ? 'bruttoeinkommen2' : 'bruttoeinkommen'}
+                    label={t('app.label_income')}
+                    value={showP2 ? bruttoeinkommen2 : bruttoeinkommen}
+                    onChange={showP2 ? setBruttoeinkommen2 : setBruttoeinkommen}
+                    max={500000}
+                    step={1000}
+                    hint={t('app.hint_income')}
+                  />
+                  {person2Active && (
+                    <div className="self-start rounded-xl bg-subtle px-4 py-3 sm:mt-6.5">
+                      <p className="text-xs text-fg-muted">{t('app.household_income')}</p>
+                      <p className="mt-0.5 text-sm font-semibold tabular-nums text-fg">{formatCHF(totalIncome, { decimals: 0 })}</p>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+
+              <details className="group rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
+                <summary className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl px-5 py-5 sm:px-6">
+                  <span className="flex min-w-0 items-start gap-3">
+                    <span aria-hidden="true" className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-subtle text-fg-secondary ring-1 ring-inset ring-border">
+                      <SlidersHorizontal className="size-3.5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-base font-semibold leading-6 tracking-tight text-fg">{t('app.card_assumptions_title')}</span>
+                      <span className="mt-0.5 block text-sm text-fg-muted">
+                        {t('app.assumptions_summary', {
+                          equity: pctLabel(equityPctN),
+                          soft: pctLabel(softEquityPctN),
+                          rates: [growthRateLiquidN, growthRate3aN, growthRatePKN].map((r) => pctLabel(r * 100)).join(' / '),
+                        })}
+                      </span>
+                    </span>
+                  </span>
+                  <ChevronDown aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-fg-muted transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="space-y-6 border-t border-border px-5 py-5 sm:px-6 sm:py-6">
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <SliderInput
+                      id="equityPct"
+                      label={t('app.label_equity_pct')}
+                      value={equityPct}
+                      onChange={setEquityPct}
+                      min={10}
+                      max={50}
+                      step={1}
+                      unit="percent"
+                      hint={t('app.hint_equity_pct')}
+                    />
+                    <SliderInput
+                      id="softEquityPct"
+                      label={t('app.label_soft_pct')}
+                      value={softEquityPct}
+                      onChange={setSoftEquityPct}
+                      min={0}
+                      max={softEquityCapN}
+                      step={1}
+                      unit="percent"
+                      hint={t('app.hint_soft_pct')}
                     />
                   </div>
-
-                  <SliderInput
-                    id="equityPct"
-                    label={t('app.label_equity_pct')}
-                    value={equityPct}
-                    onChange={setEquityPct}
-                    min={10}
-                    max={50}
-                    step={1}
-                    suffix="%"
-                    hint={t('app.hint_equity_pct')}
-                  />
-
-                  <SliderInput
-                    id="softEquityPct"
-                    label={t('app.label_soft_pct')}
-                    value={softEquityPct}
-                    onChange={setSoftEquityPct}
-                    min={0}
-                    max={softEquityCapN}
-                    step={1}
-                    suffix="%"
-                    hint={t('app.hint_soft_pct')}
-                  />
-
-                  <details className="text-xs text-slate-500 dark:text-slate-400">
-                    <summary className="cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 inline-flex items-center gap-1">
-                      <Info className="h-3.5 w-3.5" />
-                      {t('app.info_wef_title')}
-                    </summary>
-                    <p className="mt-2 leading-relaxed">{t('app.info_wef_text')}</p>
-                  </details>
-                </CardContent>
-              </Card>
-
-              <Card className="dark:bg-slate-900 dark:border-slate-800">
-                <CardHeader className="dark:border-slate-800">
-                  <CardTitleRow
-                    step={2}
-                    tone="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300"
-                    icon={<Wallet className="h-5 w-5" />}
-                    title={t('app.card_assets_title')}
-                    desc={t('app.card_assets_desc')}
-                  >
-                    {!person2Active && (
-                      <button
-                        onClick={() => { setPerson2Active(true); setPersonTab('2') }}
-                        className="flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                      >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        {t('app.add_partner_btn')}
-                      </button>
-                    )}
-                  </CardTitleRow>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  {person2Active && (
-                    <div className="flex items-center gap-2">
-                      <PersonTabs personTab={personTab} setPersonTab={setPersonTab} t={t} />
-                      {confirmRemovePartner ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => { setPerson2Active(false); setConfirmRemovePartner(false); setPersonTab('1') }}
-                            className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-950/60 transition-colors"
-                            title={t('app.confirm_remove_partner')}
-                          >
-                            {t('app.confirm_yes')}
-                          </button>
-                          <button
-                            onClick={() => setConfirmRemovePartner(false)}
-                            className="rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          >
-                            {t('app.confirm_cancel')}
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setConfirmRemovePartner(true)}
-                          aria-label={t('app.remove_partner_btn')}
-                          title={t('app.remove_partner_btn')}
-                          className="shrink-0 rounded-lg border border-rose-200 dark:border-rose-900 p-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-                        >
-                          <UserMinus className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {personTab === '1' || !person2Active ? (
-                    <>
-                      <SliderInput
-                        id="barvermoegen"
-                        label={t('app.label_bar')}
-                        value={barvermoegen}
-                        onChange={setBarvermoegen}
-                        max={500000}
-                        step={1000}
-                        icon={<Wallet className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="saeule3a"
-                        label={t('app.label_3a')}
-                        value={saeule3a}
-                        onChange={setSaeule3a}
-                        max={200000}
-                        step={1000}
-                        icon={<PiggyBank className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="pensionskasse"
-                        label={t('app.label_pk')}
-                        value={pensionskasse}
-                        onChange={setPensionskasse}
-                        max={500000}
-                        step={1000}
-                        hint={t('app.hint_pk')}
-                        icon={<Landmark className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="andere"
-                        label={t('app.label_other')}
-                        value={andereVermoegen}
-                        onChange={setAndereVermoegen}
-                        max={200000}
-                        step={1000}
-                        hint={t('app.hint_other')}
-                        icon={<Coins className="h-4 w-4" />}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <SliderInput
-                        id="barvermoegen2"
-                        label={t('app.label_bar')}
-                        value={barvermoegen2}
-                        onChange={setBarvermoegen2}
-                        max={500000}
-                        step={1000}
-                        icon={<Wallet className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="saeule3a2"
-                        label={t('app.label_3a')}
-                        value={saeule3a2}
-                        onChange={setSaeule3a2}
-                        max={200000}
-                        step={1000}
-                        icon={<PiggyBank className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="pensionskasse2"
-                        label={t('app.label_pk')}
-                        value={pensionskasse2}
-                        onChange={setPensionskasse2}
-                        max={500000}
-                        step={1000}
-                        hint={t('app.hint_pk')}
-                        icon={<Landmark className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="andere2"
-                        label={t('app.label_other')}
-                        value={andereVermoegen2}
-                        onChange={setAndereVermoegen2}
-                        max={200000}
-                        step={1000}
-                        hint={t('app.hint_other')}
-                        icon={<Coins className="h-4 w-4" />}
-                      />
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="dark:bg-slate-900 dark:border-slate-800">
-                <CardHeader className="dark:border-slate-800">
-                  <CardTitleRow
-                    step={3}
-                    tone="bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300"
-                    icon={<TrendingUp className="h-5 w-5" />}
-                    title={t('app.card_monthly_title')}
-                    desc={t('app.card_monthly_desc')}
-                  />
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  {person2Active && (
-                    <PersonTabs personTab={personTab} setPersonTab={setPersonTab} t={t} />
-                  )}
-                  {personTab === '1' || !person2Active ? (
-                    <>
-                      <SliderInput
-                        id="saeule3aMonatlich"
-                        label={t('app.label_3a_monthly')}
-                        value={saeule3aMonatlich}
-                        onChange={setSaeule3aMonatlich}
-                        max={3000}
-                        step={50}
-                        icon={<PiggyBank className="h-4 w-4" />}
-                        warning={s3aMonthlyN * 12 > PILLAR_3A_ANNUAL_CAP ? t('app.warning_3a_cap', { cap: formatCHF(PILLAR_3A_ANNUAL_CAP, { decimals: 0 }), current: formatCHF(s3aMonthlyN * 12, { decimals: 0 }) }) : undefined}
-                      />
-                      <SliderInput
-                        id="pensionskasseMonatlich"
-                        label={t('app.label_pk_monthly')}
-                        value={pensionskasseMonatlich}
-                        onChange={setPensionskasseMonatlich}
-                        max={5000}
-                        step={50}
-                        hint={t('app.hint_pk_monthly')}
-                        icon={<Landmark className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="sonstigeSparrateMonatlich"
-                        label={t('app.label_other_monthly')}
-                        value={sonstigeSparrateMonatlich}
-                        onChange={setSonstigeSparrateMonatlich}
-                        max={20000}
-                        step={50}
-                        hint={t('app.hint_other_monthly')}
-                        icon={<Wallet className="h-4 w-4" />}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <SliderInput
-                        id="saeule3aMonatlich2"
-                        label={t('app.label_3a_monthly')}
-                        value={saeule3aMonatlich2}
-                        onChange={setSaeule3aMonatlich2}
-                        max={3000}
-                        step={50}
-                        icon={<PiggyBank className="h-4 w-4" />}
-                        warning={s3aMonthlyN2 * 12 > PILLAR_3A_ANNUAL_CAP ? t('app.warning_3a_cap', { cap: formatCHF(PILLAR_3A_ANNUAL_CAP, { decimals: 0 }), current: formatCHF(s3aMonthlyN2 * 12, { decimals: 0 }) }) : undefined}
-                      />
-                      <SliderInput
-                        id="pensionskasseMonatlich2"
-                        label={t('app.label_pk_monthly')}
-                        value={pensionskasseMonatlich2}
-                        onChange={setPensionskasseMonatlich2}
-                        max={5000}
-                        step={50}
-                        hint={t('app.hint_pk_monthly')}
-                        icon={<Landmark className="h-4 w-4" />}
-                      />
-                      <SliderInput
-                        id="sonstigeSparrateMonatlich2"
-                        label={t('app.label_other_monthly')}
-                        value={sonstigeSparrateMonatlich2}
-                        onChange={setSonstigeSparrateMonatlich2}
-                        max={20000}
-                        step={50}
-                        hint={t('app.hint_other_monthly')}
-                        icon={<Wallet className="h-4 w-4" />}
-                      />
-                    </>
-                  )}
-
-                  <details className="border-t border-slate-200 dark:border-slate-800 pt-4">
-                    <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-50 inline-flex items-center gap-2">
-                      {t('app.growth_rates_title')}
-                      <span className="text-xs font-normal text-slate-400 dark:text-slate-500">{t('app.growth_rates_summary')}</span>
-                    </summary>
-                    <div className="mt-5 space-y-6">
+                  <div>
+                    <h3 className="text-sm font-medium text-fg">{t('app.growth_rates_title')}</h3>
+                    <p className="mt-0.5 text-xs leading-relaxed text-fg-muted">{t('app.growth_rate_hint')}</p>
+                    <div className="mt-4 grid gap-5 sm:grid-cols-3">
                       <SliderInput
                         id="growthRateLiquid"
                         label={t('app.label_growth_liquid')}
@@ -910,7 +631,7 @@ function AppContent() {
                         min={0}
                         max={10}
                         step={0.1}
-                        suffix="%"
+                        unit="percent"
                       />
                       <SliderInput
                         id="growthRate3a"
@@ -920,7 +641,7 @@ function AppContent() {
                         min={0}
                         max={10}
                         step={0.1}
-                        suffix="%"
+                        unit="percent"
                       />
                       <SliderInput
                         id="growthRatePK"
@@ -930,318 +651,51 @@ function AppContent() {
                         min={0}
                         max={10}
                         step={0.1}
-                        suffix="%"
-                        hint={t('app.growth_rate_hint')}
+                        unit="percent"
                       />
                     </div>
-                  </details>
-                </CardContent>
-              </Card>
-
-              <Card className="dark:bg-slate-900 dark:border-slate-800">
-                <CardHeader className="dark:border-slate-800">
-                  <CardTitleRow
-                    step={4}
-                    tone="bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-300"
-                    icon={<Banknote className="h-5 w-5" />}
-                    title={t('app.card_income_title')}
-                    desc={t('app.card_income_desc')}
-                  />
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  {person2Active && (
-                    <PersonTabs personTab={personTab} setPersonTab={setPersonTab} t={t} />
-                  )}
-                  {personTab === '1' || !person2Active ? (
-                    <SliderInput
-                      id="bruttoeinkommen"
-                      label={t('app.label_income')}
-                      value={bruttoeinkommen}
-                      onChange={setBruttoeinkommen}
-                      max={500000}
-                      step={1000}
-                      hint={t('app.hint_income')}
-                      icon={<Banknote className="h-4 w-4" />}
-                    />
-                  ) : (
-                    <SliderInput
-                      id="bruttoeinkommen2"
-                      label={t('app.label_income')}
-                      value={bruttoeinkommen2}
-                      onChange={setBruttoeinkommen2}
-                      max={500000}
-                      step={1000}
-                      hint={t('app.hint_income')}
-                      icon={<Banknote className="h-4 w-4" />}
-                    />
-                  )}
-                </CardContent>
-              </Card>
+                  </div>
+                  <Disclosure summary={t('app.info_wef_title')}>
+                    <p className="text-xs leading-relaxed text-fg-muted">{t('app.info_wef_text')}</p>
+                  </Disclosure>
+                </div>
+              </details>
             </div>
 
-            {/* Right Column: Analysis */}
-            <div className="space-y-8 lg:self-start">
-              <Card className="overflow-hidden border-slate-200 dark:border-slate-800 dark:bg-slate-900">
-                <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 dark:border-slate-800">
-                  <CardTitleRow
-                    tone="bg-blue-600 text-white dark:bg-blue-500"
-                    icon={<Calculator className="h-5 w-5" />}
-                    title={t('app.card_analysis_title')}
-                    desc={`${t('app.label_20pct', { pct: equityPctN })} (${formatCHF(totalRequired)})`}
-                  >
-                    {!priceValid ? (
-                      <Pill tone="warn">{t('app.status_enter_price')}</Pill>
-                    ) : savingsGap <= 0 ? (
-                      <Pill tone="ok">{t('app.status_goal_reached')}</Pill>
-                    ) : (
-                      <Pill tone="info">{Math.round(totalProgress * 100)}% {t('app.status_n_reached')}</Pill>
-                    )}
-                  </CardTitleRow>
-                </CardHeader>
+            {/* Result */}
+            <aside ref={asideRef} className="min-w-0 lg:sticky" style={{ top: stickyTop }}>
+              <ResultSummary
+                priceValid={priceValid}
+                goalReached={savingsGap <= 0}
+                monthlySavingsTarget={monthlySavingsTarget}
+                invalidDate={invalidDate}
+                targetDateLabel={targetDateLabel}
+                equityPct={equityPctN}
+                hardPct={equityPctN - softEquityPctN}
+                softPct={softEquityPctN}
+                totalRequired={totalRequired}
+                hardRequired={hardRequired}
+                usableTotal={usableTotalAtTarget}
+                hardTotal={hardAssetsAtTarget}
+                progress={totalProgress}
+                amounts={{ liquid: liquidAtTarget, s3a: s3aProjected, pk: pkProjected }}
+                segments={{ liquid: liquidCapped, s3a: hardCapped - liquidCapped, pk: softCapped, gap: gapDisplay }}
+                todayTotal={todayTotal}
+                hardShortfall={hardShortfallAtTarget}
+                showHardWarning={showHardWarning}
+                pkOverflow={priceValid ? Math.max(0, pkProjected - softMaxAllowed) : 0}
+                affordability={{ status: tragbarkeitStatus, ratio: tragbarkeitRatio, maxRatio: TRAGBARKEIT_MAX_RATIO }}
+                persons={person2Active ? { p1: hardP1AtTarget + pkProjected1, p2: hardP2AtTarget + pkProjected2 } : null}
+              />
+            </aside>
+          </div>
 
-                <CardContent className="space-y-7">
-                  {/* Hero result */}
-                  <div className="text-center">
-                    {!priceValid ? (
-                      <>
-                        <div className="text-5xl font-bold tracking-tight text-slate-300 dark:text-slate-700">—</div>
-                        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                          {t('app.hero_no_price')}
-                        </p>
-                      </>
-                    ) : savingsGap <= 0 ? (
-                      <>
-                        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                          <Check className="h-4 w-4" />
-                          {t('app.hero_goal_reached')}
-                        </div>
-                        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-                          {t('app.hero_goal_reached_desc', { date: targetDateLabel })}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-5xl sm:text-6xl font-bold tracking-tight text-slate-900 dark:text-slate-50 tabular-nums">
-                          {Number.isFinite(monthlySavingsTarget) ? formatCHF(roundTo2(monthlySavingsTarget)) : '—'}
-                          <span className="ml-2 text-xl font-medium text-slate-500 dark:text-slate-400">{t('app.summary_per_month')}</span>
-                        </div>
-                        <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
-                          {t('app.hero_subtitle', { date: targetDateLabel, pct: equityPctN })}
-                        </p>
-                        {invalidDate && (
-                          <div className="mt-2 text-sm text-amber-600 dark:text-amber-500">{t('app.summary_error_date')}</div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Progress bar to goal */}
-                  {priceValid && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400">
-                        <span>0</span>
-                        <span className="tabular-nums font-medium text-slate-700 dark:text-slate-300">
-                          {Math.round(totalProgress * 100)}% · {formatCHF(totalAssetsAtTarget, { decimals: 0 })} / {formatCHF(totalRequired, { decimals: 0 })}
-                        </span>
-                      </div>
-                      <div className="relative h-6 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                        <div className="flex h-full">
-                          <div
-                            className="h-full bg-emerald-500 transition-all"
-                            style={{ width: `${pct(hardCapped)}%` }}
-                            title={`${t('app.chart_hard')}: ${formatCHF(hardCapped, { decimals: 0 })}`}
-                          />
-                          <div
-                            className="h-full bg-blue-500 transition-all"
-                            style={{ width: `${pct(softCapped)}%` }}
-                            title={`${t('app.chart_pk')}: ${formatCHF(softCapped, { decimals: 0 })}`}
-                          />
-                          <div
-                            className="h-full bg-slate-300 dark:bg-slate-600 transition-all"
-                            style={{ width: `${pct(gapDisplay)}%` }}
-                            title={`${t('app.chart_gap')}: ${formatCHF(gapDisplay, { decimals: 0 })}`}
-                          />
-                        </div>
-                        {/* hard-equity hurdle marker */}
-                        <div
-                          className="pointer-events-none absolute top-0 h-full w-px bg-slate-700/40 dark:bg-slate-200/40"
-                          style={{ left: `${pct(hardRequired)}%` }}
-                          title={t('app.progress_marker_hard')}
-                        />
-                        {/* "Today" tick */}
-                        {todayPct > 0 && todayPct < 100 && (
-                          <div
-                            className="pointer-events-none absolute top-1/2 h-3 w-0.5 -translate-y-1/2 rounded-full bg-slate-900 dark:bg-slate-50"
-                            style={{ left: `calc(${todayPct}% - 1px)` }}
-                            title={`${t('app.progress_today')}: ${formatCHF(todayTotal, { decimals: 0 })}`}
-                          />
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400">
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                          {t('app.chart_hard')}
-                          <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(hardAssetsAtTarget, { decimals: 0 })}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full bg-blue-500" />
-                          {t('app.chart_pk')}
-                          <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(pkProjected, { decimals: 0 })}</span>
-                        </span>
-                        {savingsGap > 0 && (
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600" />
-                            {t('app.chart_gap')}
-                            <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(savingsGap, { decimals: 0 })}</span>
-                          </span>
-                        )}
-                        <span className="ml-auto inline-flex items-center gap-1.5">
-                          <span className="h-2 w-0.5 rounded bg-slate-900 dark:bg-slate-50" />
-                          {t('app.progress_today')}
-                          <span className="font-medium tabular-nums text-slate-700 dark:text-slate-300">{formatCHF(todayTotal, { decimals: 0 })}</span>
-                        </span>
-                      </div>
-                      {person2Active && (
-                        <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          <div className="flex justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-slate-800/50">
-                            <span>{t('app.person1_section')}</span>
-                            <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatCHF(hardP1AtTarget + pkProjected1, { decimals: 0 })}</span>
-                          </div>
-                          <div className="flex justify-between rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-slate-800/50">
-                            <span>{t('app.person2_section')}</span>
-                            <span className="font-semibold tabular-nums text-slate-700 dark:text-slate-200">{formatCHF(hardP2AtTarget + pkProjected2, { decimals: 0 })}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {showHardWarning && (
-                    <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-4 text-sm text-amber-900 dark:text-amber-200 border border-amber-100 dark:border-amber-900/50">
-                      <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-500" />
-                      <div>
-                        <span className="font-semibold block mb-1">{t('app.warning_hard_title')}</span>
-                        {t('app.warning_hard_desc', { amount: formatCHF(hardShortfallAtTarget) })}
-                      </div>
-                    </div>
-                  )}
-
-                  {priceValid && pkProjected > softMaxAllowed && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400 italic">
-                      {t('app.pk_overflow', {
-                        amount: formatCHF(pkProjected - softMaxAllowed, { decimals: 0 }),
-                        pct: softEquityPctN,
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="dark:bg-slate-900 dark:border-slate-800">
-                <CardHeader className="dark:border-slate-800">
-                  <CardTitleRow
-                    tone="bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300"
-                    icon={<Scale className="h-5 w-5" />}
-                    title={t('app.card_tragbarkeit_title')}
-                    desc={t('app.card_tragbarkeit_desc')}
-                  >
-                    {priceValid && totalIncome > 0 && (
-                      <Pill tone={tragbarkeitPasses ? 'ok' : 'warn'}>
-                        {tragbarkeitPasses ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
-                        {tragbarkeitPasses ? t('app.tragbarkeit_pass') : t('app.tragbarkeit_fail')}
-                      </Pill>
-                    )}
-                  </CardTitleRow>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  {!priceValid || totalIncome <= 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('app.tragbarkeit_no_income')}</p>
-                  ) : (
-                    <>
-                      <div className="space-y-2">
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-sm text-slate-500 dark:text-slate-400">{t('app.tragbarkeit_ratio_label')}</span>
-                          <span className={cx(
-                            'text-2xl font-bold tabular-nums',
-                            tragbarkeitPasses ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400',
-                          )}>
-                            {Math.round(tragbarkeitRatio * 100)}%
-                          </span>
-                        </div>
-                        <div className="relative h-4 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                          <div
-                            className={cx(
-                              'h-full transition-all',
-                              tragbarkeitPasses ? 'bg-emerald-500' : 'bg-amber-500',
-                            )}
-                            style={{ width: `${Math.min(100, tragbarkeitRatio * 100)}%` }}
-                          />
-                          <div
-                            className="pointer-events-none absolute top-0 h-full w-px bg-slate-700 dark:bg-slate-200"
-                            style={{ left: `${TRAGBARKEIT_MAX_RATIO * 100}%` }}
-                            title={t('app.tragbarkeit_threshold')}
-                          />
-                        </div>
-                        <div className="flex justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                          <span>0%</span>
-                          <span className="ml-auto" style={{ marginRight: `${(1 - TRAGBARKEIT_MAX_RATIO) * 100 - 5}%` }}>{t('app.tragbarkeit_threshold')}</span>
-                          <span>100%</span>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2 text-sm">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                          {t('app.tragbarkeit_breakdown_label')}
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600 dark:text-slate-400">{t('app.tragbarkeit_breakdown_interest')}</span>
-                          <span className="tabular-nums font-medium">{formatCHF(annualInterest, { decimals: 0 })}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600 dark:text-slate-400">{t('app.tragbarkeit_breakdown_amortization')}</span>
-                          <span className="tabular-nums font-medium">{formatCHF(annualAmortization, { decimals: 0 })}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-600 dark:text-slate-400">{t('app.tragbarkeit_breakdown_maintenance')}</span>
-                          <span className="tabular-nums font-medium">{formatCHF(annualMaintenance, { decimals: 0 })}</span>
-                        </div>
-                        <div className="flex justify-between border-t border-slate-200 dark:border-slate-800 pt-2 font-semibold">
-                          <span>{t('app.tragbarkeit_breakdown_total')}</span>
-                          <span className="tabular-nums">{formatCHF(annualHousingCost, { decimals: 0 })}</span>
-                        </div>
-                      </div>
-
-                      {!tragbarkeitPasses && (
-                        <div className="flex items-start gap-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-900 dark:text-amber-200 border border-amber-100 dark:border-amber-900/50">
-                          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-500" />
-                          <div>
-                            <span className="font-medium">{t('app.tragbarkeit_required_income')}: </span>
-                            <span className="tabular-nums font-semibold">{formatCHF(requiredIncome, { decimals: 0 })}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      <details className="text-xs text-slate-500 dark:text-slate-400">
-                        <summary className="cursor-pointer hover:text-slate-700 dark:hover:text-slate-200">
-                          {t('app.tragbarkeit_assumptions_title')}
-                        </summary>
-                        <p className="mt-2 leading-relaxed">{t('app.tragbarkeit_assumptions_desc')}</p>
-                      </details>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="dark:bg-slate-900 dark:border-slate-800">
-                <CardHeader className="dark:border-slate-800">
-                  <CardTitleRow
-                    tone="bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300"
-                    icon={<LineChart className="h-5 w-5" />}
-                    title={t('app.card_growth_title')}
-                    desc={t('app.card_growth_desc')}
-                  />
-                </CardHeader>
-                <CardContent>
+          {/* Details */}
+          <div className="mt-6 grid items-start gap-6 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_440px]">
+            <Card aria-labelledby="sec-growth" className="min-w-0">
+              <CardHeader id="sec-growth" title={t('app.card_growth_title')} description={t('app.card_growth_desc')} />
+              <CardBody>
+                <Suspense fallback={<div className="h-80 animate-pulse rounded-xl bg-subtle" />}>
                   <GrowthChart
                     currentLiquidAssets={barN + otherN}
                     monthlyLiquidContribution={
@@ -1267,18 +721,46 @@ function AppContent() {
                     annualRate3a={growthRate3aN}
                     annualRatePK={growthRatePKN}
                   />
-                  <div className="text-center text-xs text-slate-400 dark:text-slate-500 mt-4">
-                    {t('app.growth_note')}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                </Suspense>
+                <p className="mt-4 text-xs text-fg-muted">{t('app.growth_note')}</p>
+              </CardBody>
+            </Card>
+
+            <AffordabilityCard
+              priceValid={priceValid}
+              totalIncome={totalIncome}
+              ratio={tragbarkeitRatio}
+              passes={tragbarkeitPasses}
+              maxRatio={TRAGBARKEIT_MAX_RATIO}
+              mortgageAmount={mortgageAmount}
+              mortgagePct={100 - equityPctN}
+              annualInterest={annualInterest}
+              annualAmortization={annualAmortization}
+              annualMaintenance={annualMaintenance}
+              annualHousingCost={annualHousingCost}
+              requiredIncome={requiredIncome}
+            />
           </div>
 
-          <footer className="mt-12 border-t border-slate-200 dark:border-slate-800 pt-6 text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl mx-auto text-center">
-            {t('app.disclaimer')}
+          <footer className="mt-12 flex flex-col gap-4 border-t border-border pt-6 text-xs text-fg-muted sm:flex-row sm:items-start sm:justify-between">
+            <p className="max-w-2xl leading-relaxed">{t('app.disclaimer')}</p>
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:shrink-0">
+              <span className="inline-flex items-center gap-1.5">
+                <Lock aria-hidden="true" className="size-3.5" />
+                {t('app.saved_locally')}
+              </span>
+              <ResetButton onReset={handleReset} />
+            </div>
           </footer>
-        </div>
+        </main>
+
+        <MobileSummaryBar
+          targetId="ergebnis"
+          priceValid={priceValid}
+          goalReached={savingsGap <= 0}
+          monthlySavingsTarget={monthlySavingsTarget}
+          progress={totalProgress}
+        />
       </div>
     </ThemeProvider>
   )

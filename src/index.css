@@ -1,30 +1,185 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Design tokens. Components use the semantic utilities generated in @theme
+ * (bg-surface, text-fg-muted, border-border, ...) instead of raw palette
+ * classes, so light/dark only has to be defined here.
+ */
 :root {
   color-scheme: light;
-}
 
-@import "tailwindcss";
+  --background: #f6f6f4;
+  --surface: #ffffff;
+  --subtle: #f1f1ee;
+  --subtle-strong: #e7e6e1;
+  --border: #e5e4df;
+  --input: #d4d3cd;
 
-@variant dark (&:where(.dark, .dark *));
+  --fg: #111110;
+  --fg-secondary: #4a4945;
+  --fg-muted: #6b6a65;
 
-:root {
-  color-scheme: light;
+  --primary: #111110;
+  --primary-fg: #ffffff;
+  --brand: #da291c;
+  --ring: #111110;
+
+  --success: #13773b;
+  --success-soft: #e9f5ed;
+  --warning: #8a5300;
+  --warning-soft: #fdf3e1;
+  --danger: #b42318;
+  --danger-soft: #fdeceb;
+  /* Status fills for meters (mode-invariant, always paired with icon + label) */
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+
+  /* Chart series (validated categorical slots: blue, aqua, orange) */
+  --chart-blue: #2a78d6;
+  --chart-aqua: #1baf7a;
+  --chart-orange: #eb6834;
+  --chart-track: #ebeae6;
+  --chart-grid: #ecebe6;
 }
 
 .dark {
   color-scheme: dark;
+
+  --background: #0f0f0e;
+  --surface: #1a1a19;
+  --subtle: #242422;
+  --subtle-strong: #2f2f2c;
+  --border: #2c2c2a;
+  --input: #3d3d39;
+
+  --fg: #f4f4f2;
+  --fg-secondary: #c3c2b7;
+  --fg-muted: #9a9890;
+
+  --primary: #f4f4f2;
+  --primary-fg: #111110;
+  --brand: #ef3b2d;
+  --ring: #f4f4f2;
+
+  --success: #4cc27a;
+  --success-soft: rgb(12 163 12 / 0.14);
+  --warning: #f2b544;
+  --warning-soft: rgb(250 178 25 / 0.12);
+  --danger: #f17b72;
+  --danger-soft: rgb(208 59 59 / 0.16);
+
+  --chart-blue: #3987e5;
+  --chart-aqua: #199e70;
+  --chart-orange: #d95926;
+  --chart-track: #2f2f2c;
+  --chart-grid: #2c2c2a;
 }
 
-html,
-body {
-  height: 100%;
+@theme inline {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-subtle-strong: var(--subtle-strong);
+  --color-border: var(--border);
+  --color-input: var(--input);
+
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-brand: var(--brand);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-status-good: var(--status-good);
+  --color-status-warning: var(--status-warning);
+
+  --color-chart-blue: var(--chart-blue);
+  --color-chart-aqua: var(--chart-aqua);
+  --color-chart-orange: var(--chart-orange);
+  --color-chart-track: var(--chart-track);
 }
 
-body {
-  margin: 0;
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
-    Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  background: #f8fafc;
-  color: #0f172a;
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--background);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--brand) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  summary {
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@utility animate-fade-in {
+  animation: fade-in 150ms ease-out;
+}
+
+@utility animate-pop-in {
+  animation: pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }

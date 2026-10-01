@@ -1,11 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/logo.png" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Eigenmittel Rechner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Eigenmittel-Rechner – Wohneigentum Schweiz</title>
+  <meta name="description" content="Wie viel Eigenkapital brauchen Sie für Wohneigentum in der Schweiz? Sparrate, 20 %/10 %-Regel und Tragbarkeit auf einen Blick." />
+  <meta name="theme-color" content="#f6f6f4" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f0f0e" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <script>
+    // Apply theme and language before first paint to avoid a flash.
+    try {
+      var theme = localStorage.getItem('vite-ui-theme');
+      var dark = theme === 'dark' || ((!theme || theme === 'system') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.classList.add(dark ? 'dark' : 'light');
+      var lang = localStorage.getItem('language');
+      if (lang === 'de' || lang === 'en') document.documentElement.lang = lang;
+    } catch (e) {}
+  </script>
 </head>
 
 <body>

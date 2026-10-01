@@ -4,6 +4,16 @@ Review date: 2026-05-01
 Reviewer: Claude (Opus 4.7)
 Scope: visual + UX of webapp at desktop 1440 / mobile 375 / dark+light
 
+## Status (2026-10-01)
+
+Earlier commits plus a UI overhaul have addressed most items below: design
+tokens with one neutral palette, wider layout with a sticky result panel, hero
+savings rate, P1/P2 switch, target reference lines, compact header, opt-in
+sliders, chart grouping by asset/person, chart text alternative + table view,
+`aria-describedby` on hints, Tragbarkeit card, per-asset growth rates,
+disclaimer, reset + "saved locally" note, and a mobile horizontal overflow.
+Still open: WEF withdrawal limits are shown as information only, not modelled.
+
 ## Verdict
 
 No full redo. Architecture is solid (single state source in `App.tsx`, `useMemo` derivations,

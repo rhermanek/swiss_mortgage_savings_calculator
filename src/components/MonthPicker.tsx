@@ -2,23 +2,23 @@ import * as React from 'react'
 import { format, addMonths, subMonths, setMonth, setYear, getYear, getMonth } from 'date-fns'
 import { de, enUS } from 'date-fns/locale'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
-import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useLanguage } from '../i18n/useLanguage'
 
 type MonthPickerProps = {
+    id?: string
     value: string // yyyy-mm
     onChange: (value: string) => void
-    label?: string
     hasError?: boolean
+    describedBy?: string
     className?: string
 }
 
-export function MonthPicker({ value, onChange, label, hasError, className }: MonthPickerProps) {
+export function MonthPicker({ id, value, onChange, hasError, describedBy, className }: MonthPickerProps) {
     const { language, t } = useLanguage()
     const [open, setOpen] = React.useState(false)
 
-    // Determine locale based on current language
     const currentLocale = language === 'en' ? enUS : de
 
     // Parse current value or fallback to today
@@ -36,6 +36,10 @@ export function MonthPicker({ value, onChange, label, hasError, className }: Mon
         if (next) setViewDate(dateValue)
     }
 
+    const now = new Date()
+    const thisYear = now.getFullYear()
+    const thisMonth = now.getMonth()
+
     const nextYear = () => setViewDate(d => addMonths(d, 12))
     const prevYear = () => setViewDate(d => subMonths(d, 12))
 
@@ -51,78 +55,88 @@ export function MonthPicker({ value, onChange, label, hasError, className }: Mon
     const currentYear = getYear(viewDate)
 
     return (
-        <div className={cn("space-y-1.5", className)}>
-            {label && (
-                <label className="text-sm font-medium text-slate-800 dark:text-slate-200">
-                    {label}
-                </label>
-            )}
-            <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-                <PopoverPrimitive.Trigger asChild>
-                    <button
-                        className={cn(
-                            "flex h-11 w-full items-center justify-between rounded-xl border bg-white px-3 text-[15px] text-slate-900 shadow-sm outline-none transition",
-                            "hover:bg-slate-50 focus:ring-4",
-                            "disabled:bg-slate-50 disabled:text-slate-500",
-                            hasError
-                                ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100 dark:border-rose-600 dark:focus:ring-rose-950/40"
-                                : "border-slate-200 focus:border-slate-300 focus:ring-slate-100 dark:border-slate-800 dark:focus:ring-slate-800",
-                            "dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
-                        )}
-                    >
-                        <span className="flex items-center gap-2">
-                            <CalendarClock className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                            <span>
-                                {value ? format(dateValue, 'MMMM yyyy', { locale: currentLocale }) : <span className="text-slate-400 dark:text-slate-500">{t('app.picker_placeholder')}</span>}
-                            </span>
+        <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
+            <PopoverPrimitive.Trigger asChild>
+                <button
+                    id={id}
+                    type="button"
+                    aria-describedby={describedBy}
+                    aria-invalid={hasError || undefined}
+                    className={cn(
+                        'flex h-11 w-full items-center justify-between gap-2 rounded-xl border bg-surface px-3 text-left text-[15px] text-fg shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[border-color,box-shadow]',
+                        'focus-visible:outline-none focus-visible:ring-4',
+                        hasError
+                            ? 'border-danger focus-visible:ring-danger/15'
+                            : 'border-input hover:border-fg-muted/60 focus-visible:border-fg-muted focus-visible:ring-fg/8',
+                        className,
+                    )}
+                >
+                    <span className="flex min-w-0 items-center gap-2">
+                        <CalendarDays aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
+                        <span className="truncate">
+                            {value ? format(dateValue, 'MMMM yyyy', { locale: currentLocale }) : <span className="text-fg-muted">{t('app.picker_placeholder')}</span>}
                         </span>
-                    </button>
-                </PopoverPrimitive.Trigger>
-                <PopoverPrimitive.Portal>
-                    <PopoverPrimitive.Content
-                        align="start"
-                        className="z-50 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 dark:bg-slate-950 dark:border-slate-800"
-                    >
-                        <div className="flex items-center justify-between mb-4 px-1">
-                            <button
-                                onClick={prevYear}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 transition dark:text-slate-300 dark:hover:bg-slate-800"
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                            </button>
-                            <div className="font-semibold text-slate-900 dark:text-slate-100">
-                                {currentYear}
-                            </div>
-                            <button
-                                onClick={nextYear}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 transition dark:text-slate-300 dark:hover:bg-slate-800"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
+                    </span>
+                    <ChevronDown aria-hidden="true" className={cn('size-4 shrink-0 text-fg-muted transition-transform', open && 'rotate-180')} />
+                </button>
+            </PopoverPrimitive.Trigger>
+            <PopoverPrimitive.Portal>
+                <PopoverPrimitive.Content
+                    align="start"
+                    sideOffset={6}
+                    collisionPadding={12}
+                    className="z-50 w-72 rounded-xl border border-border bg-surface p-3 shadow-lg outline-none animate-pop-in"
+                >
+                    <div className="mb-3 flex items-center justify-between">
+                        <button
+                            type="button"
+                            onClick={prevYear}
+                            disabled={currentYear <= thisYear}
+                            aria-label={t('app.picker_prev_year')}
+                            className="flex size-8 items-center justify-center rounded-lg text-fg-secondary transition-colors hover:bg-subtle hover:text-fg disabled:pointer-events-none disabled:opacity-40"
+                        >
+                            <ChevronLeft className="size-4" />
+                        </button>
+                        <div className="text-sm font-semibold tabular-nums text-fg" aria-live="polite">
+                            {currentYear}
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
-                            {months.map(m => {
-                                const isSelected = getYear(dateValue) === currentYear && getMonth(dateValue) === m
-                                const monthName = format(new Date(2000, m, 1), 'MMM', { locale: currentLocale })
-                                return (
-                                    <button
-                                        key={m}
-                                        onClick={() => handleMonthSelect(m)}
-                                        className={cn(
-                                            "rounded-lg px-2 py-2 text-sm font-medium transition",
-                                            isSelected
-                                                ? "bg-slate-900 text-white shadow-sm dark:bg-slate-50 dark:text-slate-900"
-                                                : "bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                                        )}
-                                    >
-                                        {monthName}
-                                    </button>
-                                )
-                            })}
-                        </div>
-                    </PopoverPrimitive.Content>
-                </PopoverPrimitive.Portal>
-            </PopoverPrimitive.Root>
-        </div>
+                        <button
+                            type="button"
+                            onClick={nextYear}
+                            aria-label={t('app.picker_next_year')}
+                            className="flex size-8 items-center justify-center rounded-lg text-fg-secondary transition-colors hover:bg-subtle hover:text-fg"
+                        >
+                            <ChevronRight className="size-4" />
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                        {months.map(m => {
+                            const isSelected = getYear(dateValue) === currentYear && getMonth(dateValue) === m
+                            const isPast = currentYear < thisYear || (currentYear === thisYear && m < thisMonth)
+                            const monthDate = new Date(currentYear, m, 1)
+                            return (
+                                <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => handleMonthSelect(m)}
+                                    disabled={isPast && !isSelected}
+                                    aria-pressed={isSelected}
+                                    aria-label={format(monthDate, 'MMMM yyyy', { locale: currentLocale })}
+                                    className={cn(
+                                        'h-9 rounded-lg text-sm font-medium transition-colors',
+                                        'disabled:pointer-events-none disabled:opacity-35',
+                                        isSelected
+                                            ? 'bg-primary text-primary-fg shadow-sm'
+                                            : 'text-fg-secondary hover:bg-subtle hover:text-fg',
+                                    )}
+                                >
+                                    {format(monthDate, 'MMM', { locale: currentLocale })}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </PopoverPrimitive.Content>
+            </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
     )
 }

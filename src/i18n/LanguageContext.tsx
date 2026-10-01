@@ -11,6 +11,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         localStorage.setItem('language', language);
+        document.documentElement.lang = language;
+        document.title = translations[language].app.document_title;
     }, [language]);
 
     const t = (path: string, params?: Record<string, string | number>): string => {

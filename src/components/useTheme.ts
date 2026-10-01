@@ -1,14 +1,16 @@
 import { createContext, useContext } from "react"
 
-type Theme = "dark" | "light" | "system"
+export type Theme = "dark" | "light" | "system"
 
 export type ThemeProviderState = {
     theme: Theme
+    resolvedTheme: "dark" | "light"
     setTheme: (theme: Theme) => void
 }
 
 const initialState: ThemeProviderState = {
     theme: "system",
+    resolvedTheme: "light",
     setTheme: () => null,
 }
 
