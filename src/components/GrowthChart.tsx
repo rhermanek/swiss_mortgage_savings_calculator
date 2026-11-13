@@ -3,27 +3,14 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { cn } from '../lib/utils'
 import { formatCHF, formatCompact } from '../lib/format'
 import { useLanguage } from '../i18n/useLanguage'
+import { projectionRowIndices, type ProjectionPoint } from '../lib/projection'
 import { Disclosure, SegmentedControl, Swatch } from './ui'
 
 type GrowthChartProps = {
-    currentLiquidAssets: number
-    monthlyLiquidContribution: number
-    current3aAssets: number
-    monthly3aContribution: number
-    currentPKAssets: number
-    monthlyPKContribution: number
-    currentLiquidAssets2?: number
-    monthlyLiquidContribution2?: number
-    current3aAssets2?: number
-    monthly3aContribution2?: number
-    currentPKAssets2?: number
-    monthlyPKContribution2?: number
-    months: number
+    points: ProjectionPoint[]
+    hasPerson2: boolean
     targetAmount: number
-    targetMonthIndex?: number
-    annualRateLiquid?: number
-    annualRate3a?: number
-    annualRatePK?: number
+    targetMonthIndex: number
     className?: string
 }
 
@@ -41,11 +28,11 @@ type Point = Record<SeriesKey | 'total', number> & { name: string; fullName: str
 
 // Same entity → same color as the equity progress bar in the result card.
 const SERIES_STYLE: Record<SeriesKey, { color: string; swatch: string }> = {
-    liquid: { color: 'var(--chart-blue)', swatch: 'bg-chart-blue' },
-    s3a: { color: 'var(--chart-aqua)', swatch: 'bg-chart-aqua' },
-    pk: { color: 'var(--chart-orange)', swatch: 'bg-chart-orange' },
-    p1: { color: 'var(--chart-blue)', swatch: 'bg-chart-blue' },
-    p2: { color: 'var(--chart-orange)', swatch: 'bg-chart-orange' },
+    liquid: { color: 'var(--series-1)', swatch: 'bg-series-1' },
+    s3a: { color: 'var(--series-2)', swatch: 'bg-series-2' },
+    pk: { color: 'var(--series-3)', swatch: 'bg-series-3' },
+    p1: { color: 'var(--series-1)', swatch: 'bg-series-1' },
+    p2: { color: 'var(--series-2)', swatch: 'bg-series-2' },
 }
 
 type TooltipPayloadEntry = {
@@ -68,18 +55,18 @@ function ChartTooltip({
     if (!active || !payload?.length || !payload[0].payload) return null
     const point = payload[0].payload
     return (
-        <div className="min-w-52 rounded-xl border border-border bg-surface p-3 text-sm shadow-lg">
-            <div className="mb-2 font-medium text-fg">{point.fullName}</div>
+        <div className="t-caption min-w-48 rounded-control bg-tooltip px-3 py-2.5 text-tooltip-ink">
+            <div className="mb-1.5 font-semibold">{point.fullName}</div>
             <div className="space-y-1">
                 {[...series].reverse().map((s) => (
                     <div key={s.key} className="flex items-center gap-2">
                         <Swatch className={s.swatch} />
-                        <span className="text-fg-secondary">{s.label}</span>
-                        <span className="ml-auto pl-4 tabular-nums text-fg">{formatCHF(point[s.key], { decimals: 0 })}</span>
+                        <span className="opacity-80">{s.label}</span>
+                        <span className="ml-auto pl-4 tabular-nums">{formatCHF(point[s.key], { decimals: 0 })}</span>
                     </div>
                 ))}
             </div>
-            <div className="mt-2 flex items-center justify-between border-t border-border pt-2 font-semibold text-fg">
+            <div className="mt-1.5 flex items-center justify-between border-t border-white/15 pt-1.5 font-semibold">
                 <span>{totalLabel}</span>
                 <span className="tabular-nums">{formatCHF(point.total, { decimals: 0 })}</span>
             </div>
@@ -87,33 +74,12 @@ function ChartTooltip({
     )
 }
 
-export function GrowthChart({
-    currentLiquidAssets,
-    monthlyLiquidContribution,
-    current3aAssets,
-    monthly3aContribution,
-    currentPKAssets,
-    monthlyPKContribution,
-    currentLiquidAssets2,
-    monthlyLiquidContribution2,
-    current3aAssets2,
-    monthly3aContribution2,
-    currentPKAssets2,
-    monthlyPKContribution2,
-    months,
-    targetAmount,
-    targetMonthIndex,
-    annualRateLiquid = 0,
-    annualRate3a = 0,
-    annualRatePK = 0,
-    className,
-}: GrowthChartProps) {
+export function GrowthChart({ points, hasPerson2, targetAmount, targetMonthIndex, className }: GrowthChartProps) {
     const { t, language } = useLanguage()
     const [groupBy, setGroupBy] = useState<GroupBy>('asset')
     const [selected, setSelected] = useState<Set<SeriesKey>>(new Set())
     const reduceMotion = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, [])
 
-    const hasPerson2 = currentLiquidAssets2 !== undefined
     const effectiveGroupBy: GroupBy = hasPerson2 ? groupBy : 'asset'
     const locale = language === 'de' ? 'de-CH' : 'en-CH'
 
@@ -142,64 +108,26 @@ export function GrowthChart({
         })
     }
 
-    const data = useMemo<Point[]>(() => {
-        if (months <= 0) return []
+    const data = useMemo<Point[]>(
+        () =>
+            points.map(({ date, ...values }) => ({
+                ...values,
+                name: date.toLocaleDateString(locale, { month: 'short', year: '2-digit' }),
+                fullName: date.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
+            })),
+        [points, locale],
+    )
 
-        const points: Point[] = []
-        const now = new Date()
-        const monthlyLiquid = annualRateLiquid > 0 ? annualRateLiquid / 12 : 0
-        const monthly3a = annualRate3a > 0 ? annualRate3a / 12 : 0
-        const monthlyPK = annualRatePK > 0 ? annualRatePK / 12 : 0
+    const hasTargetMonth = targetMonthIndex >= 0 && targetMonthIndex < data.length
 
-        // Iterative compound per asset class (linear when its rate is 0).
-        let liquid = currentLiquidAssets
-        let s3a = current3aAssets
-        let pk = currentPKAssets
-        let liquid2 = hasPerson2 ? currentLiquidAssets2! : 0
-        let s3a2 = hasPerson2 ? current3aAssets2! : 0
-        let pk2 = hasPerson2 ? currentPKAssets2! : 0
-
-        for (let i = 0; i <= months; i++) {
-            if (i > 0) {
-                liquid = liquid * (1 + monthlyLiquid) + monthlyLiquidContribution
-                s3a = s3a * (1 + monthly3a) + monthly3aContribution
-                pk = pk * (1 + monthlyPK) + monthlyPKContribution
-                if (hasPerson2) {
-                    liquid2 = liquid2 * (1 + monthlyLiquid) + (monthlyLiquidContribution2 ?? 0)
-                    s3a2 = s3a2 * (1 + monthly3a) + (monthly3aContribution2 ?? 0)
-                    pk2 = pk2 * (1 + monthlyPK) + (monthlyPKContribution2 ?? 0)
-                }
-            }
-
-            const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
-            points.push({
-                name: d.toLocaleDateString(locale, { month: 'short', year: '2-digit' }),
-                fullName: d.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
-                liquid: liquid + liquid2,
-                s3a: s3a + s3a2,
-                pk: pk + pk2,
-                p1: liquid + s3a + pk,
-                p2: liquid2 + s3a2 + pk2,
-                total: liquid + s3a + pk + liquid2 + s3a2 + pk2,
-            })
-        }
-        return points
-    }, [currentLiquidAssets, monthlyLiquidContribution, current3aAssets, monthly3aContribution, currentPKAssets, monthlyPKContribution, currentLiquidAssets2, monthlyLiquidContribution2, current3aAssets2, monthly3aContribution2, currentPKAssets2, monthlyPKContribution2, months, locale, hasPerson2, annualRateLiquid, annualRate3a, annualRatePK])
-
-    const hasTargetMonth = targetMonthIndex !== undefined && targetMonthIndex >= 0 && targetMonthIndex < data.length
-
-    // Yearly rows plus the purchase month and the last projected month.
-    const tableRows = useMemo(() => {
-        const idx = new Set<number>()
-        for (let i = 0; i < data.length; i += 12) idx.add(i)
-        if (hasTargetMonth) idx.add(targetMonthIndex!)
-        if (data.length) idx.add(data.length - 1)
-        return [...idx].sort((a, b) => a - b).map((i) => ({ i, point: data[i] }))
-    }, [data, hasTargetMonth, targetMonthIndex])
+    const tableRows = useMemo(
+        () => projectionRowIndices(data.length, targetMonthIndex).map((i) => ({ i, point: data[i] })),
+        [data, targetMonthIndex],
+    )
 
     if (!data.length) return null
 
-    const atTarget = hasTargetMonth ? data[targetMonthIndex!] : data[data.length - 1]
+    const atTarget = hasTargetMonth ? data[targetMonthIndex] : data[data.length - 1]
     const summary = t('charts.aria_summary', {
         start: formatCHF(data[0].total, { decimals: 0 }),
         end: formatCHF(atTarget.total, { decimals: 0 }),
@@ -220,12 +148,12 @@ export function GrowthChart({
                             onClick={() => toggleSeries(s.key)}
                             aria-pressed={selected.has(s.key)}
                             className={cn(
-                                'inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors',
+                                't-caption inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 font-medium transition-colors',
                                 selected.has(s.key)
-                                    ? 'border-fg/30 bg-subtle text-fg'
+                                    ? 'bg-fg text-surface'
                                     : isActive(s.key)
-                                        ? 'border-border text-fg-secondary hover:bg-subtle hover:text-fg'
-                                        : 'border-border text-fg-muted opacity-60 hover:opacity-100',
+                                        ? 'bg-subtle text-fg-secondary hover:text-fg'
+                                        : 'bg-subtle text-fg-muted opacity-60 hover:opacity-100',
                             )}
                         >
                             <Swatch className={s.swatch} />
@@ -253,26 +181,26 @@ export function GrowthChart({
             <div className="h-64 sm:h-72">
                 <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 288 }}>
                     <AreaChart data={data} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
-                        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
+                        <CartesianGrid vertical={false} stroke="var(--border)" />
                         <XAxis
                             dataKey="name"
-                            tick={{ fontSize: 12, fill: 'var(--fg-muted)' }}
+                            tick={{ fontSize: 12, fill: 'var(--ink-500)' }}
                             tickLine={false}
-                            axisLine={{ stroke: 'var(--input)' }}
+                            axisLine={{ stroke: 'var(--border-strong)' }}
                             interval="preserveStartEnd"
                             minTickGap={32}
                             tickMargin={8}
                         />
                         <YAxis
                             width="auto"
-                            tick={{ fontSize: 12, fill: 'var(--fg-muted)' }}
+                            tick={{ fontSize: 12, fill: 'var(--ink-500)' }}
                             tickLine={false}
                             axisLine={false}
                             tickMargin={4}
                             tickFormatter={(value: number) => formatCompact(value, language)}
                         />
                         <Tooltip
-                            cursor={{ stroke: 'var(--fg-muted)', strokeWidth: 1 }}
+                            cursor={{ stroke: 'var(--context-line)', strokeWidth: 1 }}
                             content={<ChartTooltip series={series} totalLabel={t('charts.label_total')} />}
                         />
                         {series.map((s) => (
@@ -286,7 +214,7 @@ export function GrowthChart({
                                 strokeWidth={2}
                                 strokeOpacity={isActive(s.key) ? 1 : 0.25}
                                 fill={s.color}
-                                fillOpacity={isActive(s.key) ? 0.14 : 0.03}
+                                fillOpacity={isActive(s.key) ? 0.16 : 0.03}
                                 activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--surface)' }}
                                 isAnimationActive={!reduceMotion}
                             />
@@ -294,29 +222,28 @@ export function GrowthChart({
                         {targetAmount > 0 && (
                             <ReferenceLine
                                 y={targetAmount}
-                                stroke="var(--fg-secondary)"
+                                stroke="var(--ink-700)"
                                 strokeDasharray="4 4"
                                 strokeWidth={1.5}
                                 ifOverflow="extendDomain"
                                 label={{
                                     value: `${t('charts.label_target')} ${formatCompact(targetAmount, language)}`,
-                                    position: 'insideTopLeft',
-                                    fill: 'var(--fg-secondary)',
+                                    position: 'insideBottomLeft',
+                                    fill: 'var(--ink-700)',
                                     fontSize: 11,
                                     fontWeight: 600,
-                                    dy: -14,
                                 }}
                             />
                         )}
                         {hasTargetMonth && (
                             <ReferenceLine
-                                x={data[targetMonthIndex!].name}
-                                stroke="var(--fg-muted)"
+                                x={data[targetMonthIndex].name}
+                                stroke="var(--context-line)"
                                 strokeDasharray="3 3"
                                 label={{
                                     value: t('charts.label_target_month'),
                                     position: 'insideTopRight',
-                                    fill: 'var(--fg-muted)',
+                                    fill: 'var(--ink-500)',
                                     fontSize: 11,
                                     fontWeight: 500,
                                 }}
@@ -327,28 +254,28 @@ export function GrowthChart({
             </div>
 
             <Disclosure summary={t('charts.table_toggle')} className="mt-4">
-                <div className="overflow-x-auto rounded-xl border border-border">
-                    <table className="w-full text-right text-xs tabular-nums">
-                        <thead className="bg-subtle text-fg-secondary">
+                <div className="overflow-x-auto">
+                    <table className="t-small w-full text-right tabular-nums">
+                        <thead className="t-pill border-b border-border text-fg-muted">
                             <tr>
-                                <th scope="col" className="px-3 py-2 text-left font-medium">{t('charts.table_date')}</th>
+                                <th scope="col" className="py-2 pr-3 text-left font-semibold">{t('charts.table_date')}</th>
                                 {series.map((s) => (
-                                    <th key={s.key} scope="col" className="px-3 py-2 font-medium">{s.label}</th>
+                                    <th key={s.key} scope="col" className="px-3 py-2 font-semibold">{s.label}</th>
                                 ))}
-                                <th scope="col" className="px-3 py-2 font-medium">{t('charts.label_total')}</th>
+                                <th scope="col" className="py-2 pl-3 font-semibold">{t('charts.label_total')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border text-fg">
                             {tableRows.map(({ i, point }) => (
-                                <tr key={i} className={cn(i === targetMonthIndex && 'bg-subtle/60 font-medium')}>
-                                    <th scope="row" className="whitespace-nowrap px-3 py-2 text-left font-normal text-fg-secondary">
+                                <tr key={i} className={cn(i === targetMonthIndex && 'font-semibold')}>
+                                    <th scope="row" className="whitespace-nowrap py-2 pr-3 text-left [font-weight:inherit] text-fg-secondary">
                                         {point.fullName}
-                                        {i === targetMonthIndex && <span className="ml-1.5 text-fg-muted">· {t('charts.label_target_month')}</span>}
+                                        {i === targetMonthIndex && <span className="ml-1.5 font-normal text-fg-muted">· {t('charts.label_target_month')}</span>}
                                     </th>
                                     {series.map((s) => (
                                         <td key={s.key} className="whitespace-nowrap px-3 py-2">{formatCHF(point[s.key], { decimals: 0 })}</td>
                                     ))}
-                                    <td className="whitespace-nowrap px-3 py-2 font-medium">{formatCHF(point.total, { decimals: 0 })}</td>
+                                    <td className="whitespace-nowrap py-2 pl-3 font-semibold">{formatCHF(point.total, { decimals: 0 })}</td>
                                 </tr>
                             ))}
                         </tbody>

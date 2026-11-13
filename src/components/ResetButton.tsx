@@ -2,6 +2,8 @@ import { useState } from 'react'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { RotateCcw } from 'lucide-react'
 import { useLanguage } from '../i18n/useLanguage'
+import { cn } from '../lib/utils'
+import { popoverClass } from '../lib/styles'
 import { Button } from './ui'
 
 export function ResetButton({ onReset }: { onReset: () => void }) {
@@ -11,8 +13,8 @@ export function ResetButton({ onReset }: { onReset: () => void }) {
     return (
         <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
             <PopoverPrimitive.Trigger asChild>
-                <Button variant="ghost" size="sm" className="-mx-2 text-xs">
-                    <RotateCcw aria-hidden="true" className="size-3.5!" />
+                <Button variant="plain" size="sm" className="-mx-3">
+                    <RotateCcw aria-hidden="true" />
                     {t('app.reset')}
                 </Button>
             </PopoverPrimitive.Trigger>
@@ -22,10 +24,10 @@ export function ResetButton({ onReset }: { onReset: () => void }) {
                     align="end"
                     sideOffset={6}
                     collisionPadding={12}
-                    className="z-50 w-72 rounded-xl border border-border bg-surface p-4 shadow-lg outline-none animate-pop-in"
+                    className={cn(popoverClass, 'w-72 p-4')}
                 >
-                    <p className="text-sm font-semibold text-fg">{t('app.reset_confirm_title')}</p>
-                    <p className="mt-1 text-sm leading-relaxed text-fg-muted">{t('app.reset_confirm_desc')}</p>
+                    <p className="t-card-title text-fg">{t('app.reset_confirm_title')}</p>
+                    <p className="t-small mt-1 text-fg-muted">{t('app.reset_confirm_desc')}</p>
                     <div className="mt-4 flex justify-end gap-2">
                         <PopoverPrimitive.Close asChild>
                             <Button variant="ghost" size="sm">{t('app.confirm_cancel')}</Button>
