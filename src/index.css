@@ -3,138 +3,189 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Design tokens. Components use the semantic utilities generated in @theme
- * (bg-surface, text-fg-muted, border-border, ...) instead of raw palette
- * classes, so light/dark only has to be defined here.
+ * Design tokens: AiOS design system (light "Ember Atelier", dark "Dusk Glass").
+ * Components use the semantic utilities generated in @theme (bg-surface,
+ * text-fg-muted, bg-brand, ...) instead of raw palette classes, so light/dark
+ * only has to be defined here. `.sheet` pins the light values for the
+ * printable summary, which is paper in either theme.
  */
-:root {
+:root,
+.sheet {
   color-scheme: light;
 
-  --background: #f6f6f4;
+  --page: #f2f2f7;
   --surface: #ffffff;
-  --subtle: #f1f1ee;
-  --subtle-strong: #e7e6e1;
-  --border: #e5e4df;
-  --input: #d4d3cd;
+  --surface-muted: #f5f5f7;
+  --border: #e5e5ea;
+  --border-strong: #d1d1d6;
 
-  --fg: #111110;
-  --fg-secondary: #4a4945;
-  --fg-muted: #6b6a65;
+  --ink-900: #1d1d1f;
+  --ink-800: #333336;
+  --ink-700: #48484a;
+  --ink-600: #5e5e63;
+  --ink-500: #6e6e73;
+  --ink-400: #8e8e93;
+  --ink-300: #c7c7cc;
 
-  --primary: #111110;
-  --primary-fg: #ffffff;
-  --brand: #da291c;
-  --ring: #111110;
+  --red: #da291c;
+  --red-hover: #c12117;
+  --red-tint: #fbeae6;
+  --focus: #f3c8c0;
+  --accent: #2f6fa3;
+  --accent-tint: #e8f0f7;
 
-  --success: #13773b;
-  --success-soft: #e9f5ed;
-  --warning: #8a5300;
-  --warning-soft: #fdf3e1;
-  --danger: #b42318;
-  --danger-soft: #fdeceb;
-  /* Status fills for meters (mode-invariant, always paired with icon + label) */
-  --status-good: #0ca30c;
-  --status-warning: #fab219;
+  --success: #1f9d55;
+  --success-tint: #e7f4ec;
+  --warning: #e8a013;
+  --warning-tint: #fbf1dc;
+  --warning-ink: #8a5a00;
+  --danger: #da291c;
+  --danger-tint: #fbeae6;
 
-  /* Chart series (validated categorical slots: blue, aqua, orange) */
-  --chart-blue: #2a78d6;
-  --chart-aqua: #1baf7a;
-  --chart-orange: #eb6834;
-  --chart-track: #ebeae6;
-  --chart-grid: #ecebe6;
+  --context: #d9d6d2;
+  --context-line: #b8b4af;
+  --tooltip: #1d1d1f;
+  --tooltip-ink: #f4f0ea;
+
+  /* Chart series, in order, for series of equal weight */
+  --series-1: #133f5c;
+  --series-2: #f3a533;
+  --series-3: #940359;
+
+  --rule-from: #da291c;
+  --rule-to: #e88548;
+
+  --sh-card: 0 1px 2px rgba(31, 26, 22, 0.04), 0 8px 24px -14px rgba(31, 26, 22, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --sh-item: 0 1px 2px rgba(31, 26, 22, 0.06), 0 0 0 1px rgba(31, 26, 22, 0.05);
+  --sh-pop: 0 2px 6px rgba(31, 26, 22, 0.06), 0 18px 40px -16px rgba(31, 26, 22, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: #0f0f0e;
-  --surface: #1a1a19;
-  --subtle: #242422;
-  --subtle-strong: #2f2f2c;
-  --border: #2c2c2a;
-  --input: #3d3d39;
+  --page: #1c1c1e;
+  --surface: #24201d;
+  --surface-muted: #2b2622;
+  --border: #2f2925;
+  --border-strong: #3a332e;
 
-  --fg: #f4f4f2;
-  --fg-secondary: #c3c2b7;
-  --fg-muted: #9a9890;
+  --ink-900: #f4f0ea;
+  --ink-800: #e6e0d8;
+  --ink-700: #cfc7bd;
+  --ink-600: #b5aca1;
+  --ink-500: #9b9188;
+  --ink-400: #7b726a;
+  --ink-300: #5e564f;
 
-  --primary: #f4f4f2;
-  --primary-fg: #111110;
-  --brand: #ef3b2d;
-  --ring: #f4f4f2;
+  --red: #f0463a;
+  --red-hover: #ff5a4d;
+  --red-tint: #3c211d;
+  --focus: #8e3b33;
+  --accent: #6fb1f0;
+  --accent-tint: #2d3640;
 
-  --success: #4cc27a;
-  --success-soft: rgb(12 163 12 / 0.14);
-  --warning: #f2b544;
-  --warning-soft: rgb(250 178 25 / 0.12);
-  --danger: #f17b72;
-  --danger-soft: rgb(208 59 59 / 0.16);
+  --success: #4fcb7e;
+  --success-tint: #263426;
+  --warning: #f2b33d;
+  --warning-tint: #3d301d;
+  --warning-ink: #f2b33d;
+  --danger: #ff6a5e;
+  --danger-tint: #3e2622;
 
-  --chart-blue: #3987e5;
-  --chart-aqua: #199e70;
-  --chart-orange: #d95926;
-  --chart-track: #2f2f2c;
-  --chart-grid: #2c2c2a;
+  --context: #4a433d;
+  --context-line: #6b625a;
+  --tooltip: #2a2521;
+  --tooltip-ink: #f4f0ea;
+
+  --series-1: #6fa3c9;
+  --series-2: #f3a533;
+  --series-3: #d04a97;
+
+  --rule-from: #ffb03a;
+  --rule-to: #f0463a;
+
+  --sh-card: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 24px 60px -30px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --sh-item: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.05), 0 6px 16px -10px rgba(0, 0, 0, 0.8);
+  --sh-pop: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 30px 70px -30px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 @theme inline {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+  --font-sans: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
 
-  --color-background: var(--background);
+  --color-background: var(--page);
   --color-surface: var(--surface);
-  --color-subtle: var(--subtle);
-  --color-subtle-strong: var(--subtle-strong);
+  --color-subtle: var(--surface-muted);
   --color-border: var(--border);
-  --color-input: var(--input);
+  --color-border-strong: var(--border-strong);
 
-  --color-fg: var(--fg);
-  --color-fg-secondary: var(--fg-secondary);
-  --color-fg-muted: var(--fg-muted);
+  --color-fg: var(--ink-900);
+  --color-fg-label: var(--ink-800);
+  --color-fg-secondary: var(--ink-700);
+  --color-fg-muted: var(--ink-500);
+  --color-fg-faint: var(--ink-400);
+  --color-fg-ghost: var(--ink-300);
 
-  --color-primary: var(--primary);
-  --color-primary-fg: var(--primary-fg);
-  --color-brand: var(--brand);
-  --color-ring: var(--ring);
+  --color-brand: var(--red);
+  --color-brand-hover: var(--red-hover);
+  --color-brand-tint: var(--red-tint);
+  --color-focus: var(--focus);
+  --color-accent: var(--accent);
+  --color-accent-tint: var(--accent-tint);
 
   --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
+  --color-success-tint: var(--success-tint);
   --color-warning: var(--warning);
-  --color-warning-soft: var(--warning-soft);
+  --color-warning-tint: var(--warning-tint);
+  --color-warning-ink: var(--warning-ink);
   --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-status-good: var(--status-good);
-  --color-status-warning: var(--status-warning);
+  --color-danger-tint: var(--danger-tint);
 
-  --color-chart-blue: var(--chart-blue);
-  --color-chart-aqua: var(--chart-aqua);
-  --color-chart-orange: var(--chart-orange);
-  --color-chart-track: var(--chart-track);
+  --color-context: var(--context);
+  --color-context-line: var(--context-line);
+  --color-tooltip: var(--tooltip);
+  --color-tooltip-ink: var(--tooltip-ink);
+
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+
+  /* Radius steps down as you go in: page card → item → small control */
+  --radius-card: 17px;
+  --radius-item: 12px;
+  --radius-control: 8px;
+
+  --shadow-card: var(--sh-card);
+  --shadow-item: var(--sh-item);
+  --shadow-pop: var(--sh-pop);
 }
 
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
-    scroll-padding-top: 5rem;
+    scroll-padding-top: 1.5rem;
   }
 
   body {
     margin: 0;
     min-height: 100dvh;
-    background-color: var(--background);
-    color: var(--fg);
+    background-color: var(--page);
+    color: var(--ink-900);
     font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
   }
 
   ::selection {
-    background-color: color-mix(in oklab, var(--brand) 22%, transparent);
+    background-color: var(--red-tint);
   }
 
   :focus-visible {
-    outline: 2px solid var(--ring);
+    outline: 2px solid var(--focus);
     outline-offset: 2px;
   }
 
@@ -144,6 +195,105 @@
 
   summary::-webkit-details-marker {
     display: none;
+  }
+}
+
+/* Type scale */
+@utility t-page-title {
+  font-size: 23px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  @media (width >= 40rem) {
+    font-size: 28px;
+  }
+}
+
+@utility t-kpi {
+  font-size: 28px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+@utility t-card-title {
+  font-size: 15px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+@utility t-body {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@utility t-small {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@utility t-caption {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@utility t-kicker {
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--red);
+}
+
+@utility t-pill {
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+/* Muted uppercase label with a 3px red tick */
+@utility section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-500);
+  &::before {
+    content: "";
+    width: 3px;
+    height: 12px;
+    border-radius: 999px;
+    background: var(--red);
+    flex: none;
+  }
+}
+
+/* 3px hairline at the very top of a page. Used nowhere else. */
+@utility beam {
+  height: 3px;
+  background: linear-gradient(90deg, #940359 0%, #c9367c 22%, #da291c 52%, #e88548 80%, #f3a533 100%);
+}
+
+/* 6px accent rule beside kicker, title and subtitle */
+@utility accent-rule {
+  position: relative;
+  padding-left: 18px;
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+    width: 6px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--rule-from), var(--rule-to));
   }
 }
 
@@ -182,4 +332,50 @@
 
 @utility animate-pop-in {
   animation: pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/*
+ * Printable summary. #print-root holds a copy of the sheet that only exists on
+ * paper; everything else (app, dialogs, popovers) is dropped from the print.
+ */
+#print-root {
+  display: none;
+}
+
+.sheet {
+  background: var(--surface);
+  color: var(--ink-900);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+@page {
+  size: A4;
+  margin: 12mm 14mm;
+}
+
+@media print {
+  html,
+  html.dark {
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    min-height: 0;
+  }
+
+  body > *:not(#print-root) {
+    display: none !important;
+  }
+
+  #print-root {
+    display: block;
+  }
+
+  .sheet-section {
+    break-inside: avoid;
+  }
+
 }

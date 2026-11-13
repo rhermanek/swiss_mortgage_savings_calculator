@@ -38,8 +38,8 @@ export function Wizard({ isOpen, onClose, onComplete, initialValues }: WizardPro
     return (
         <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
             <DialogPrimitive.Portal>
-                <DialogPrimitive.Overlay className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 backdrop-blur-[2px] animate-fade-in sm:items-center sm:p-4">
-                    <DialogPrimitive.Content className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-surface shadow-2xl outline-none animate-pop-in sm:max-w-xl sm:rounded-2xl">
+                <DialogPrimitive.Overlay className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 animate-fade-in sm:items-center sm:p-4">
+                    <DialogPrimitive.Content className="flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-card bg-surface shadow-pop outline-none animate-pop-in sm:max-w-xl sm:rounded-card">
                         {/* Content unmounts on close, so each opening starts from the current values */}
                         <WizardContent onClose={onClose} onComplete={onComplete} initialValues={initialValues} />
                     </DialogPrimitive.Content>
@@ -79,7 +79,7 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
                 updateValue("person2Active", next)
                 if (!next) setPersonTab('1')
             }}
-            className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-left text-sm font-medium text-fg transition-colors hover:bg-subtle"
+            className="t-small flex w-full items-center gap-3 rounded-item bg-subtle px-3.5 py-3 text-left font-medium text-fg transition-colors hover:bg-border"
         >
             <Users aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
             <span className="flex-1">{t('wizard.toggle_partner')}</span>
@@ -87,7 +87,7 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
                 aria-hidden="true"
                 className={cn(
                     'relative h-5 w-9 shrink-0 rounded-full transition-colors',
-                    values.person2Active ? 'bg-primary' : 'bg-subtle-strong',
+                    values.person2Active ? 'bg-fg' : 'bg-fg-ghost',
                 )}
             >
                 <span
@@ -118,12 +118,12 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
             title: t('wizard.step_1_title'),
             description: t('wizard.step_1_desc'),
             content: (
-                <div className="space-y-4 text-sm text-fg-secondary">
+                <div className="space-y-4 text-fg-secondary">
                     <p>{t('wizard.step_1_text')}</p>
                     <ol className="space-y-2">
                         {[t('wizard.step_1_li_1'), t('wizard.step_1_li_2'), t('wizard.step_1_li_3')].map((item, i) => (
-                            <li key={item} className="flex items-center gap-3 rounded-xl bg-subtle px-3.5 py-3 text-fg">
-                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold tabular-nums text-fg-secondary ring-1 ring-border">
+                            <li key={item} className="flex items-center gap-3 rounded-item bg-subtle px-3.5 py-3 text-fg">
+                                <span className="t-pill flex size-5 shrink-0 items-center justify-center rounded-full bg-surface tabular-nums text-fg-muted">
                                     {i + 1}
                                 </span>
                                 {item}
@@ -138,7 +138,7 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
             title: t('wizard.step_2_title'),
             description: t('wizard.step_2_desc'),
             content: (
-                <div className="space-y-6">
+                <div className="space-y-5">
                     <Callout icon={<Info />}>{t('wizard.step_2_info')}</Callout>
                     <SliderInput
                         id="wiz-kaufpreis"
@@ -149,7 +149,7 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
                         step={10000}
                     />
                     <div className="space-y-1.5">
-                        <label htmlFor="wiz-datum" className="text-sm font-medium text-fg">
+                        <label htmlFor="wiz-datum" className="t-small font-medium text-fg">
                             {t('wizard.label_datum')}
                         </label>
                         <MonthPicker
@@ -165,7 +165,7 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
             title: t('wizard.step_3_title'),
             description: t('wizard.step_3_desc'),
             content: (
-                <div className="space-y-6">
+                <div className="space-y-5">
                     <Callout icon={<Info />}>{t('wizard.step_3_info')}</Callout>
                     {partnerToggle}
                     {personTabs}
@@ -203,7 +203,7 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
             title: t('wizard.step_4_title'),
             description: t('wizard.step_4_desc'),
             content: (
-                <div className="space-y-6">
+                <div className="space-y-5">
                     <Callout icon={<Info />}>{t('wizard.step_4_info')}</Callout>
                     {personTabs}
                     <SliderInput
@@ -246,13 +246,13 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
     return (
         <>
             {/* Header */}
-            <div className="px-6 pt-5">
+            <div className="px-5 pt-[18px]">
                 <div className="flex items-center justify-between gap-4">
-                    <p className="text-xs font-medium tabular-nums text-fg-muted">
+                    <p className="t-kicker tabular-nums">
                         {t('wizard.step_progress', { current: step + 1, total: steps.length })}
                     </p>
                     <DialogPrimitive.Close asChild>
-                        <Button variant="ghost" size="icon-sm" className="-mr-2" aria-label={t('wizard.btn_close')}>
+                        <Button variant="plain" size="icon-sm" className="-mr-1.5" aria-label={t('wizard.btn_close')}>
                             <X />
                         </Button>
                     </DialogPrimitive.Close>
@@ -261,25 +261,25 @@ function WizardContent({ onClose, onComplete, initialValues }: Omit<WizardProps,
                     {steps.map((_, i) => (
                         <span
                             key={i}
-                            className={cn('h-1 flex-1 rounded-full transition-colors', i <= step ? 'bg-brand' : 'bg-subtle-strong')}
+                            className={cn('h-1 flex-1 rounded-full transition-colors', i <= step ? 'bg-brand' : 'bg-border')}
                         />
                     ))}
                 </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 pb-6 pt-5">
-                <DialogPrimitive.Title className="text-xl font-semibold tracking-tight text-fg">
+            <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5">
+                <DialogPrimitive.Title className="t-page-title text-fg">
                     {currentStep.title}
                 </DialogPrimitive.Title>
-                <DialogPrimitive.Description className="mt-1 text-sm text-fg-muted">
+                <DialogPrimitive.Description className="mt-1.5 text-fg-muted">
                     {currentStep.description}
                 </DialogPrimitive.Description>
-                <div className="mt-6">{currentStep.content}</div>
+                <div className="mt-5">{currentStep.content}</div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between gap-3 border-t border-border bg-subtle/50 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))]">
                 <Button variant="ghost" onClick={handleBack} disabled={step === 0} className={cn(step === 0 && 'invisible')}>
                     <ArrowLeft aria-hidden="true" />
                     {t('wizard.btn_back')}

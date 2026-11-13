@@ -4,15 +4,18 @@ import { AffordabilityCard } from './components/AffordabilityCard'
 import { AppHeader } from './components/AppHeader'
 import { MobileSummaryBar } from './components/MobileSummaryBar'
 import { MonthPicker } from './components/MonthPicker'
+import { PrintDialog } from './components/PrintDialog'
+import type { ReportData } from './components/PrintReport'
 import { ResetButton } from './components/ResetButton'
 import { ResultSummary, type RuleStatus } from './components/ResultSummary'
 import { SliderInput } from './components/SliderInput'
 import { ThemeProvider } from './components/ThemeProvider'
-import { Card, CardBody, CardHeader, Disclosure, SegmentedControl } from './components/ui'
+import { Card, CardBody, CardHeader, Disclosure, SectionLabel, SegmentedControl } from './components/ui'
 import { Wizard, type WizardValues } from './components/Wizard'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { useLanguage } from './i18n/useLanguage'
 import { formatCHF, formatNumber, parseMoney } from './lib/format'
+import { buildProjection } from './lib/projection'
 import { useStickyTop } from './lib/useStickyTop'
 
 // Recharts is the bulk of the bundle and the chart sits below the fold.
@@ -130,6 +133,7 @@ function AppContent() {
   const [andereVermoegen, setAndereVermoegen] = usePersistentState('andereVermoegen')
 
   const [isWizardOpen, setIsWizardOpen] = useState(false)
+  const [isPrintOpen, setIsPrintOpen] = useState(false)
   const [personTab, setPersonTab] = useState<'1' | '2'>('1')
 
   const [saeule3aMonatlich, setSaeule3aMonatlich] = usePersistentState('saeule3aMonatlich')
@@ -249,33 +253,24 @@ function AppContent() {
   // Person 1 projections (compound monthly when its growth rate > 0)
   const s3aProjected1 = useMemo(() => projectCompound(s3aN, s3aMonthlyN, growthRate3aN, monthsRemaining), [growthRate3aN, monthsRemaining, s3aMonthlyN, s3aN])
   const pkProjected1 = useMemo(() => projectCompound(pkN, pkMonthlyN, growthRatePKN, monthsRemaining), [growthRatePKN, monthsRemaining, pkMonthlyN, pkN])
-  const otherProjected1 = useMemo(() => projectCompound(otherN, otherMonthlySavingsN, growthRateLiquidN, monthsRemaining), [growthRateLiquidN, monthsRemaining, otherMonthlySavingsN, otherN])
+  // Cash and other assets are one liquid pot: both earn the liquid rate.
+  const liquidProjected1 = useMemo(() => projectCompound(barN + otherN, otherMonthlySavingsN, growthRateLiquidN, monthsRemaining), [barN, growthRateLiquidN, monthsRemaining, otherMonthlySavingsN, otherN])
 
   // Person 2 projections
   const s3aProjected2 = useMemo(() => projectCompound(s3aN2, s3aMonthlyN2, growthRate3aN, monthsRemaining), [growthRate3aN, monthsRemaining, s3aMonthlyN2, s3aN2])
   const pkProjected2 = useMemo(() => projectCompound(pkN2, pkMonthlyN2, growthRatePKN, monthsRemaining), [growthRatePKN, monthsRemaining, pkMonthlyN2, pkN2])
-  const otherProjected2 = useMemo(() => projectCompound(otherN2, otherMonthlySavingsN2, growthRateLiquidN, monthsRemaining), [growthRateLiquidN, monthsRemaining, otherMonthlySavingsN2, otherN2])
+  const liquidProjected2 = useMemo(() => projectCompound(barN2 + otherN2, otherMonthlySavingsN2, growthRateLiquidN, monthsRemaining), [barN2, growthRateLiquidN, monthsRemaining, otherMonthlySavingsN2, otherN2])
 
   // Combined
   const s3aProjected = useMemo(() => s3aProjected1 + s3aProjected2, [s3aProjected1, s3aProjected2])
   const pkProjected = useMemo(() => pkProjected1 + pkProjected2, [pkProjected1, pkProjected2])
-  const otherProjected = useMemo(() => otherProjected1 + otherProjected2, [otherProjected1, otherProjected2])
 
-  const liquidAtTarget = barN + barN2 + otherProjected
-  const hardAssetsAtTarget = useMemo(
-    () => (barN + barN2) + otherProjected + s3aProjected,
-    [barN, barN2, otherProjected, s3aProjected],
-  )
+  const liquidAtTarget = liquidProjected1 + liquidProjected2
+  const hardAssetsAtTarget = liquidAtTarget + s3aProjected
 
   // Per-person totals at target (for breakdown display)
-  const hardP1AtTarget = useMemo(
-    () => barN + otherProjected1 + s3aProjected1,
-    [barN, otherProjected1, s3aProjected1],
-  )
-  const hardP2AtTarget = useMemo(
-    () => barN2 + otherProjected2 + s3aProjected2,
-    [barN2, otherProjected2, s3aProjected2],
-  )
+  const hardP1AtTarget = liquidProjected1 + s3aProjected1
+  const hardP2AtTarget = liquidProjected2 + s3aProjected2
 
   // PK only counts toward equity up to softMaxAllowed (bank rule)
   const usableSoftAtTarget = useMemo(
@@ -360,8 +355,102 @@ function AppContent() {
   const requiredIncome = annualHousingCost / TRAGBARKEIT_MAX_RATIO
   const tragbarkeitStatus: RuleStatus = !priceValid || totalIncome <= 0 ? 'pending' : tragbarkeitPasses ? 'pass' : 'fail'
 
+  const goalReached = savingsGap <= 0
+  const extraMonthly = Number.isFinite(monthlySavingsTarget) ? monthlySavingsTarget : 0
+
+  // The recommended extra savings are booked to person 1's liquid assets.
+  const projection = useMemo(
+    () =>
+      buildProjection({
+        months: monthsRemaining + 12,
+        p1: {
+          liquid: barN + otherN,
+          liquidMonthly: otherMonthlySavingsN + extraMonthly,
+          s3a: s3aN,
+          s3aMonthly: s3aMonthlyN,
+          pk: pkN,
+          pkMonthly: pkMonthlyN,
+        },
+        p2: person2Active
+          ? {
+              liquid: barN2 + otherN2,
+              liquidMonthly: otherMonthlySavingsN2,
+              s3a: s3aN2,
+              s3aMonthly: s3aMonthlyN2,
+              pk: pkN2,
+              pkMonthly: pkMonthlyN2,
+            }
+          : null,
+        rates: { liquid: growthRateLiquidN, s3a: growthRate3aN, pk: growthRatePKN },
+      }),
+    [barN, barN2, extraMonthly, growthRate3aN, growthRateLiquidN, growthRatePKN, monthsRemaining, otherMonthlySavingsN, otherMonthlySavingsN2, otherN, otherN2, person2Active, pkMonthlyN, pkMonthlyN2, pkN, pkN2, s3aMonthlyN, s3aMonthlyN2, s3aN, s3aN2],
+  )
+
+  // Page and summary titles state the result as a claim.
+  const claim = !priceValid
+    ? t('app.claim_no_price')
+    : goalReached
+      ? t('app.claim_reached', { date: targetDateLabel })
+      : invalidDate
+        ? t('app.claim_no_time', { amount: formatCHF(Math.ceil(savingsGap), { decimals: 0 }) })
+        : t('app.claim_gap', { date: targetDateLabel, amount: formatCHF(Math.ceil(savingsGap), { decimals: 0 }) })
+
+  const equitySegments = { liquid: liquidCapped, s3a: hardCapped - liquidCapped, pk: softCapped, gap: gapDisplay }
+  const equityAmounts = { liquid: liquidAtTarget, s3a: s3aProjected, pk: pkProjected }
+  const pkOverflow = priceValid ? Math.max(0, pkProjected - softMaxAllowed) : 0
+
+  const report: ReportData = {
+    claim,
+    priceValid,
+    price: kaufpreisN,
+    targetDateLabel,
+    monthsRemaining,
+    persons: [
+      { cash: barN, s3a: s3aN, pk: pkN, other: otherN, s3aMonthly: s3aMonthlyN, pkMonthly: pkMonthlyN, otherMonthly: otherMonthlySavingsN, income: incomeN },
+      ...(person2Active
+        ? [{ cash: barN2, s3a: s3aN2, pk: pkN2, other: otherN2, s3aMonthly: s3aMonthlyN2, pkMonthly: pkMonthlyN2, otherMonthly: otherMonthlySavingsN2, income: incomeN2 }]
+        : []),
+    ],
+    assumptions: {
+      equityPct: equityPctN,
+      hardPct: equityPctN - softEquityPctN,
+      softPct: softEquityPctN,
+      rateLiquid: growthRateLiquidN,
+      rate3a: growthRate3aN,
+      ratePK: growthRatePKN,
+    },
+    result: {
+      goalReached,
+      monthly: monthlySavingsTarget,
+      totalRequired,
+      hardRequired,
+      usableTotal: usableTotalAtTarget,
+      hardTotal: hardAssetsAtTarget,
+      amounts: equityAmounts,
+      segments: equitySegments,
+      pkOverflow,
+    },
+    affordability: {
+      status: tragbarkeitStatus,
+      ratio: tragbarkeitRatio,
+      maxRatio: TRAGBARKEIT_MAX_RATIO,
+      mortgageAmount,
+      mortgagePct: 100 - equityPctN,
+      interest: annualInterest,
+      amortization: annualAmortization,
+      maintenance: annualMaintenance,
+      housingCost: annualHousingCost,
+      income: totalIncome,
+      requiredIncome,
+    },
+    projection,
+    targetMonthIndex: monthsRemaining,
+  }
+
+  const openPrint = () => setIsPrintOpen(true)
+
   const asideRef = useRef<HTMLElement>(null)
-  const stickyTop = useStickyTop(asideRef, 80)
+  const stickyTop = useStickyTop(asideRef, 24)
 
   const showP2 = person2Active && personTab === '2'
   const pctLabel = (n: number) => formatNumber(n, 1)
@@ -395,12 +484,14 @@ function AppContent() {
       <div className="min-h-dvh bg-background text-fg">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:shadow-lg"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-50 focus:rounded-full focus:bg-surface focus:px-3.5 focus:py-2 focus:text-[13px] focus:font-medium focus:shadow-pop"
         >
           {t('app.skip_to_content')}
         </a>
 
-        <AppHeader onOpenWizard={() => setIsWizardOpen(true)} />
+        <AppHeader claim={claim} onOpenWizard={() => setIsWizardOpen(true)} onPrint={openPrint} />
+
+        <PrintDialog isOpen={isPrintOpen} onClose={() => setIsPrintOpen(false)} data={report} />
 
         <Wizard
           isOpen={isWizardOpen}
@@ -427,13 +518,14 @@ function AppContent() {
           }}
         />
 
-        <main id="main" className="mx-auto w-full max-w-7xl px-4 pb-32 pt-6 sm:px-6 lg:px-8 lg:pb-16 lg:pt-8">
-          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_440px]">
+        <main id="main" className="mx-auto w-full max-w-[1280px] px-4 pb-32 pt-8 sm:px-8 lg:pb-16">
+          <div className="grid items-start gap-x-6 gap-y-8 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]">
             {/* Inputs */}
-            <div className="min-w-0 space-y-6">
+            <div className="min-w-0 space-y-3">
+              <SectionLabel>{t('app.section_inputs')}</SectionLabel>
               <Card aria-labelledby="sec-objekt">
                 <CardHeader id="sec-objekt" step={1} title={t('app.card_obj_title')} description={t('app.card_obj_desc')} />
-                <CardBody className="grid gap-5 sm:grid-cols-2">
+                <CardBody className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                   <SliderInput
                     id="kaufpreis"
                     label={t('app.label_kaufpreis')}
@@ -445,8 +537,8 @@ function AppContent() {
                   />
                   <div className="space-y-1.5">
                     <div className="flex min-h-5 items-baseline justify-between gap-3">
-                      <label htmlFor="zielmonat" className="text-sm font-medium text-fg">{t('app.label_zielmonat')}</label>
-                      <span className="text-xs tabular-nums text-fg-muted">{t('app.months_until', { n: monthsRemaining })}</span>
+                      <label htmlFor="zielmonat" className="t-small font-medium text-fg">{t('app.label_zielmonat')}</label>
+                      <span className="t-caption tabular-nums text-fg-muted">{t('app.months_until', { n: monthsRemaining })}</span>
                     </div>
                     <MonthPicker id="zielmonat" value={zielMonat} onChange={setZielMonat} hasError={invalidDate} />
                   </div>
@@ -472,7 +564,7 @@ function AppContent() {
                     />
                   }
                 />
-                <CardBody className="grid gap-5 sm:grid-cols-2">
+                <CardBody className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                   {personSwitch}
                   <SliderInput
                     key={`bar-${personTab}`}
@@ -517,7 +609,7 @@ function AppContent() {
 
               <Card aria-labelledby="sec-monthly">
                 <CardHeader id="sec-monthly" step={3} title={t('app.card_monthly_title')} description={t('app.card_monthly_desc')} />
-                <CardBody className="grid gap-5 sm:grid-cols-2">
+                <CardBody className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                   {personSwitch}
                   <SliderInput
                     key={`3a-mt-${personTab}`}
@@ -554,7 +646,7 @@ function AppContent() {
 
               <Card aria-labelledby="sec-income">
                 <CardHeader id="sec-income" step={4} title={t('app.card_income_title')} description={t('app.card_income_desc')} />
-                <CardBody className="grid gap-5 sm:grid-cols-2">
+                <CardBody className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                   {personSwitch}
                   <SliderInput
                     key={`income-${personTab}`}
@@ -567,23 +659,23 @@ function AppContent() {
                     hint={t('app.hint_income')}
                   />
                   {person2Active && (
-                    <div className="self-start rounded-xl bg-subtle px-4 py-3 sm:mt-6.5">
-                      <p className="text-xs text-fg-muted">{t('app.household_income')}</p>
-                      <p className="mt-0.5 text-sm font-semibold tabular-nums text-fg">{formatCHF(totalIncome, { decimals: 0 })}</p>
+                    <div className="self-start rounded-item bg-subtle px-3.5 py-2.5 sm:mt-[26px]">
+                      <p className="t-caption text-fg-muted">{t('app.household_income')}</p>
+                      <p className="t-small mt-0.5 font-semibold tabular-nums text-fg">{formatCHF(totalIncome, { decimals: 0 })}</p>
                     </div>
                   )}
                 </CardBody>
               </Card>
 
-              <details className="group rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
-                <summary className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl px-5 py-5 sm:px-6">
+              <details className="group rounded-card bg-surface shadow-card">
+                <summary className="flex cursor-pointer items-start justify-between gap-4 rounded-card px-5 py-[18px]">
                   <span className="flex min-w-0 items-start gap-3">
-                    <span aria-hidden="true" className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-subtle text-fg-secondary ring-1 ring-inset ring-border">
-                      <SlidersHorizontal className="size-3.5" />
+                    <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center rounded-full bg-subtle text-fg-muted">
+                      <SlidersHorizontal className="size-3" />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-base font-semibold leading-6 tracking-tight text-fg">{t('app.card_assumptions_title')}</span>
-                      <span className="mt-0.5 block text-sm text-fg-muted">
+                      <span className="t-card-title block text-fg">{t('app.card_assumptions_title')}</span>
+                      <span className="t-caption mt-0.5 block text-fg-muted">
                         {t('app.assumptions_summary', {
                           equity: pctLabel(equityPctN),
                           soft: pctLabel(softEquityPctN),
@@ -592,10 +684,10 @@ function AppContent() {
                       </span>
                     </span>
                   </span>
-                  <ChevronDown aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-fg-muted transition-transform group-open:rotate-180" />
+                  <ChevronDown aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-fg-muted transition-transform group-open:rotate-180" />
                 </summary>
-                <div className="space-y-6 border-t border-border px-5 py-5 sm:px-6 sm:py-6">
-                  <div className="grid gap-5 sm:grid-cols-2">
+                <div className="space-y-5 border-t border-border px-5 py-5">
+                  <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
                     <SliderInput
                       id="equityPct"
                       label={t('app.label_equity_pct')}
@@ -620,9 +712,9 @@ function AppContent() {
                     />
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-fg">{t('app.growth_rates_title')}</h3>
-                    <p className="mt-0.5 text-xs leading-relaxed text-fg-muted">{t('app.growth_rate_hint')}</p>
-                    <div className="mt-4 grid gap-5 sm:grid-cols-3">
+                    <h4 className="t-small font-semibold text-fg">{t('app.growth_rates_title')}</h4>
+                    <p className="t-caption mt-0.5 text-fg-muted">{t('app.growth_rate_hint')}</p>
+                    <div className="mt-3 grid gap-x-5 gap-y-4 sm:grid-cols-3">
                       <SliderInput
                         id="growthRateLiquid"
                         label={t('app.label_growth_liquid')}
@@ -656,17 +748,18 @@ function AppContent() {
                     </div>
                   </div>
                   <Disclosure summary={t('app.info_wef_title')}>
-                    <p className="text-xs leading-relaxed text-fg-muted">{t('app.info_wef_text')}</p>
+                    <p className="t-caption text-fg-muted">{t('app.info_wef_text')}</p>
                   </Disclosure>
                 </div>
               </details>
             </div>
 
             {/* Result */}
-            <aside ref={asideRef} className="min-w-0 lg:sticky" style={{ top: stickyTop }}>
+            <aside ref={asideRef} className="min-w-0 space-y-3 lg:sticky" style={{ top: stickyTop }}>
+              <SectionLabel>{t('app.section_result')}</SectionLabel>
               <ResultSummary
                 priceValid={priceValid}
-                goalReached={savingsGap <= 0}
+                goalReached={goalReached}
                 monthlySavingsTarget={monthlySavingsTarget}
                 invalidDate={invalidDate}
                 targetDateLabel={targetDateLabel}
@@ -678,51 +771,34 @@ function AppContent() {
                 usableTotal={usableTotalAtTarget}
                 hardTotal={hardAssetsAtTarget}
                 progress={totalProgress}
-                amounts={{ liquid: liquidAtTarget, s3a: s3aProjected, pk: pkProjected }}
-                segments={{ liquid: liquidCapped, s3a: hardCapped - liquidCapped, pk: softCapped, gap: gapDisplay }}
+                amounts={equityAmounts}
+                segments={equitySegments}
                 todayTotal={todayTotal}
                 hardShortfall={hardShortfallAtTarget}
                 showHardWarning={showHardWarning}
-                pkOverflow={priceValid ? Math.max(0, pkProjected - softMaxAllowed) : 0}
+                pkOverflow={pkOverflow}
                 affordability={{ status: tragbarkeitStatus, ratio: tragbarkeitRatio, maxRatio: TRAGBARKEIT_MAX_RATIO }}
                 persons={person2Active ? { p1: hardP1AtTarget + pkProjected1, p2: hardP2AtTarget + pkProjected2 } : null}
+                onPrint={openPrint}
               />
             </aside>
           </div>
 
           {/* Details */}
-          <div className="mt-6 grid items-start gap-6 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_440px]">
+          <SectionLabel className="mt-8">{t('app.section_details')}</SectionLabel>
+          <div className="mt-3 grid items-start gap-x-6 gap-y-3 lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[minmax(0,1fr)_420px]">
             <Card aria-labelledby="sec-growth" className="min-w-0">
               <CardHeader id="sec-growth" title={t('app.card_growth_title')} description={t('app.card_growth_desc')} />
               <CardBody>
-                <Suspense fallback={<div className="h-80 animate-pulse rounded-xl bg-subtle" />}>
+                <Suspense fallback={<div className="h-80 rounded-item bg-subtle" />}>
                   <GrowthChart
-                    currentLiquidAssets={barN + otherN}
-                    monthlyLiquidContribution={
-                      otherMonthlySavingsN +
-                      (Number.isFinite(monthlySavingsTarget) ? monthlySavingsTarget : 0)
-                    }
-                    current3aAssets={s3aN}
-                    monthly3aContribution={s3aMonthlyN}
-                    currentPKAssets={pkN}
-                    monthlyPKContribution={pkMonthlyN}
-                    {...(person2Active ? {
-                      currentLiquidAssets2: barN2 + otherN2,
-                      monthlyLiquidContribution2: otherMonthlySavingsN2,
-                      current3aAssets2: s3aN2,
-                      monthly3aContribution2: s3aMonthlyN2,
-                      currentPKAssets2: pkN2,
-                      monthlyPKContribution2: pkMonthlyN2,
-                    } : {})}
-                    months={monthsRemaining + 12}
+                    points={projection}
+                    hasPerson2={person2Active}
                     targetAmount={totalRequired}
                     targetMonthIndex={monthsRemaining}
-                    annualRateLiquid={growthRateLiquidN}
-                    annualRate3a={growthRate3aN}
-                    annualRatePK={growthRatePKN}
                   />
                 </Suspense>
-                <p className="mt-4 text-xs text-fg-muted">{t('app.growth_note')}</p>
+                <p className="t-caption mt-4 text-fg-muted">{t('app.growth_note')}</p>
               </CardBody>
             </Card>
 
@@ -742,11 +818,11 @@ function AppContent() {
             />
           </div>
 
-          <footer className="mt-12 flex flex-col gap-4 border-t border-border pt-6 text-xs text-fg-muted sm:flex-row sm:items-start sm:justify-between">
-            <p className="max-w-2xl leading-relaxed">{t('app.disclaimer')}</p>
-            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:shrink-0">
+          <footer className="t-caption mt-10 flex flex-col gap-3 border-t border-border pt-4 text-fg-muted sm:flex-row sm:items-start sm:justify-between">
+            <p className="max-w-2xl">{t('app.disclaimer')}</p>
+            <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 sm:shrink-0">
               <span className="inline-flex items-center gap-1.5">
-                <Lock aria-hidden="true" className="size-3.5" />
+                <Lock aria-hidden="true" className="size-3" />
                 {t('app.saved_locally')}
               </span>
               <ResetButton onReset={handleReset} />
@@ -757,7 +833,7 @@ function AppContent() {
         <MobileSummaryBar
           targetId="ergebnis"
           priceValid={priceValid}
-          goalReached={savingsGap <= 0}
+          goalReached={goalReached}
           monthlySavingsTarget={monthlySavingsTarget}
           progress={totalProgress}
         />

@@ -4,6 +4,7 @@ import { de, enUS } from 'date-fns/locale'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { fieldClass, popoverClass } from '../lib/styles'
 import { useLanguage } from '../i18n/useLanguage'
 
 type MonthPickerProps = {
@@ -63,18 +64,15 @@ export function MonthPicker({ id, value, onChange, hasError, describedBy, classN
                     aria-describedby={describedBy}
                     aria-invalid={hasError || undefined}
                     className={cn(
-                        'flex h-11 w-full items-center justify-between gap-2 rounded-xl border bg-surface px-3 text-left text-[15px] text-fg shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-[border-color,box-shadow]',
-                        'focus-visible:outline-none focus-visible:ring-4',
-                        hasError
-                            ? 'border-danger focus-visible:ring-danger/15'
-                            : 'border-input hover:border-fg-muted/60 focus-visible:border-fg-muted focus-visible:ring-fg/8',
+                        'flex w-full items-center justify-between gap-2 px-3 text-left text-sm font-medium text-fg',
+                        fieldClass(hasError),
                         className,
                     )}
                 >
                     <span className="flex min-w-0 items-center gap-2">
                         <CalendarDays aria-hidden="true" className="size-4 shrink-0 text-fg-muted" />
                         <span className="truncate">
-                            {value ? format(dateValue, 'MMMM yyyy', { locale: currentLocale }) : <span className="text-fg-muted">{t('app.picker_placeholder')}</span>}
+                            {value ? format(dateValue, 'MMMM yyyy', { locale: currentLocale }) : <span className="text-fg-faint">{t('app.picker_placeholder')}</span>}
                         </span>
                     </span>
                     <ChevronDown aria-hidden="true" className={cn('size-4 shrink-0 text-fg-muted transition-transform', open && 'rotate-180')} />
@@ -85,7 +83,7 @@ export function MonthPicker({ id, value, onChange, hasError, describedBy, classN
                     align="start"
                     sideOffset={6}
                     collisionPadding={12}
-                    className="z-50 w-72 rounded-xl border border-border bg-surface p-3 shadow-lg outline-none animate-pop-in"
+                    className={cn(popoverClass, 'w-72 p-3')}
                 >
                     <div className="mb-3 flex items-center justify-between">
                         <button
@@ -93,18 +91,18 @@ export function MonthPicker({ id, value, onChange, hasError, describedBy, classN
                             onClick={prevYear}
                             disabled={currentYear <= thisYear}
                             aria-label={t('app.picker_prev_year')}
-                            className="flex size-8 items-center justify-center rounded-lg text-fg-secondary transition-colors hover:bg-subtle hover:text-fg disabled:pointer-events-none disabled:opacity-40"
+                            className="flex size-8 items-center justify-center rounded-full text-fg-secondary transition-colors hover:bg-subtle hover:text-fg disabled:pointer-events-none disabled:opacity-45"
                         >
                             <ChevronLeft className="size-4" />
                         </button>
-                        <div className="text-sm font-semibold tabular-nums text-fg" aria-live="polite">
+                        <div className="t-small font-semibold tabular-nums text-fg" aria-live="polite">
                             {currentYear}
                         </div>
                         <button
                             type="button"
                             onClick={nextYear}
                             aria-label={t('app.picker_next_year')}
-                            className="flex size-8 items-center justify-center rounded-lg text-fg-secondary transition-colors hover:bg-subtle hover:text-fg"
+                            className="flex size-8 items-center justify-center rounded-full text-fg-secondary transition-colors hover:bg-subtle hover:text-fg"
                         >
                             <ChevronRight className="size-4" />
                         </button>
@@ -123,10 +121,10 @@ export function MonthPicker({ id, value, onChange, hasError, describedBy, classN
                                     aria-pressed={isSelected}
                                     aria-label={format(monthDate, 'MMMM yyyy', { locale: currentLocale })}
                                     className={cn(
-                                        'h-9 rounded-lg text-sm font-medium transition-colors',
-                                        'disabled:pointer-events-none disabled:opacity-35',
+                                        't-small h-8 rounded-full font-medium transition-colors',
+                                        'disabled:pointer-events-none disabled:opacity-45',
                                         isSelected
-                                            ? 'bg-primary text-primary-fg shadow-sm'
+                                            ? 'bg-fg text-surface'
                                             : 'text-fg-secondary hover:bg-subtle hover:text-fg',
                                     )}
                                 >

@@ -2,20 +2,14 @@ import * as React from 'react'
 import * as PopoverPrimitive from '@radix-ui/react-popover'
 import { ChevronDown, Info } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { popoverClass } from '../lib/styles'
 
 // Shared presentational primitives. Colors come from the semantic tokens in
 // index.css so light/dark mode needs no per-component overrides.
 
+// Floating card: surface + card shadow (the 1px ring is part of the shadow).
 export function Card({ className, ...props }: React.ComponentProps<'section'>) {
-  return (
-    <section
-      className={cn(
-        'rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.04)]',
-        className,
-      )}
-      {...props}
-    />
-  )
+  return <section className={cn('rounded-card bg-surface shadow-card', className)} {...props} />
 }
 
 export function CardHeader({
@@ -34,14 +28,14 @@ export function CardHeader({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-5 pt-5 sm:px-6 sm:pt-6', className)}>
+    <div className={cn('flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-5 pt-[18px]', className)}>
       <div className="flex min-w-0 flex-1 basis-60 items-start gap-3">
         {step != null && <StepBadge step={step} />}
         <div className="min-w-0">
-          <h2 id={id} className="text-base font-semibold leading-6 tracking-tight text-fg">
+          <h3 id={id} className="t-card-title text-fg">
             {title}
-          </h2>
-          {description != null && <p className="mt-0.5 text-sm text-fg-muted">{description}</p>}
+          </h3>
+          {description != null && <p className="t-caption mt-0.5 text-fg-muted">{description}</p>}
         </div>
       </div>
       {action != null && <div className="shrink-0">{action}</div>}
@@ -53,7 +47,7 @@ export function StepBadge({ step }: { step: number }) {
   return (
     <span
       aria-hidden="true"
-      className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-subtle text-xs font-semibold tabular-nums text-fg-secondary ring-1 ring-inset ring-border"
+      className="t-pill flex size-5 shrink-0 items-center justify-center rounded-full bg-subtle tabular-nums text-fg-muted"
     >
       {step}
     </span>
@@ -61,29 +55,34 @@ export function StepBadge({ step }: { step: number }) {
 }
 
 export function CardBody({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('px-5 pb-5 pt-5 sm:px-6 sm:pb-6', className)} {...props} />
+  return <div className={cn('px-5 pb-5 pt-4', className)} {...props} />
 }
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+export function SectionLabel({ className, ...props }: React.ComponentProps<'h2'>) {
+  return <h2 className={cn('section-label', className)} {...props} />
+}
+
+// One solid red (primary) button per screen; everything else is a ghost.
+type ButtonVariant = 'ghost' | 'outline' | 'primary' | 'danger' | 'plain'
 type ButtonSize = 'sm' | 'md' | 'icon' | 'icon-sm'
 
 const buttonVariants: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-primary-fg shadow-sm hover:bg-primary/85',
-  secondary:
-    'border border-border bg-surface text-fg shadow-[0_1px_2px_rgb(0_0_0/0.04)] hover:bg-subtle',
-  ghost: 'text-fg-secondary hover:bg-subtle hover:text-fg',
-  danger: 'bg-danger text-white shadow-sm hover:bg-danger/90 dark:text-[#1a0503]',
+  ghost: 'bg-subtle text-fg-label hover:bg-border',
+  outline: 'text-fg-label shadow-[inset_0_0_0_1px_var(--border-strong)] hover:bg-subtle',
+  primary: 'bg-brand text-white hover:bg-brand-hover',
+  danger: 'bg-danger-tint text-danger hover:brightness-95 dark:hover:brightness-125',
+  plain: 'text-fg-secondary hover:bg-subtle hover:text-fg',
 }
 
 const buttonSizes: Record<ButtonSize, string> = {
-  sm: 'h-8 gap-1.5 rounded-lg px-3 text-sm',
-  md: 'h-10 gap-2 rounded-xl px-4 text-sm',
-  icon: 'size-9 rounded-lg',
-  'icon-sm': 'size-8 rounded-lg',
+  sm: 'h-7 gap-1.5 px-3',
+  md: 'h-8 gap-1.5 px-3.5',
+  icon: 'size-8',
+  'icon-sm': 'size-7',
 }
 
 export function Button({
-  variant = 'secondary',
+  variant = 'ghost',
   size = 'md',
   className,
   type = 'button',
@@ -93,8 +92,8 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-colors',
-        'disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0',
+        'inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full text-[13px] font-medium transition-colors duration-150',
+        'disabled:pointer-events-none disabled:opacity-45 [&_svg]:size-3.5 [&_svg]:shrink-0',
         buttonVariants[variant],
         buttonSizes[size],
         className,
@@ -112,7 +111,7 @@ type SegmentOption<T extends string> = {
 }
 
 // Radio-group semantics with roving tabindex: Tab focuses the selected option,
-// arrow keys move the selection.
+// arrow keys move the selection. The selected segment is ink, not red.
 export function SegmentedControl<T extends string>({
   value,
   onChange,
@@ -147,7 +146,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className={cn('inline-flex items-center gap-0.5 rounded-[10px] bg-subtle p-0.5 ring-1 ring-inset ring-border', className)}
+      className={cn('inline-flex items-center gap-0.5 rounded-full bg-subtle p-0.5 shadow-[inset_0_0_0_1px_var(--border)]', className)}
     >
       {options.map((option, index) => {
         const selected = option.value === value
@@ -165,11 +164,9 @@ export function SegmentedControl<T extends string>({
             onClick={() => onChange(option.value)}
             onKeyDown={(e) => onKeyDown(e, index)}
             className={cn(
-              'inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-medium transition-[color,background-color,box-shadow] [&_svg]:size-3.5 [&_svg]:shrink-0',
-              size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-sm',
-              selected
-                ? 'bg-surface text-fg shadow-[0_1px_2px_rgb(0_0_0/0.08)] ring-1 ring-border dark:bg-subtle-strong'
-                : 'text-fg-muted hover:text-fg',
+              'inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-medium transition-colors duration-150 [&_svg]:size-3.5 [&_svg]:shrink-0',
+              size === 'sm' ? 'h-7 px-3 text-xs' : 'h-8 px-3.5 text-[13px]',
+              selected ? 'bg-fg text-surface' : 'text-fg-secondary hover:text-fg',
             )}
           >
             {option.icon}
@@ -184,17 +181,18 @@ export function SegmentedControl<T extends string>({
 type Tone = 'success' | 'warning' | 'danger' | 'neutral'
 
 const badgeTones: Record<Tone, string> = {
-  success: 'bg-success-soft text-success',
-  warning: 'bg-warning-soft text-warning',
-  danger: 'bg-danger-soft text-danger',
+  success: 'bg-success-tint text-success',
+  warning: 'bg-warning-tint text-warning-ink',
+  danger: 'bg-danger-tint text-danger',
   neutral: 'bg-subtle text-fg-secondary',
 }
 
+// Status pill. A colour never stands alone: always pass the word as children.
 export function Badge({ tone = 'neutral', className, ...props }: React.ComponentProps<'span'> & { tone?: Tone }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium [&_svg]:size-3.5 [&_svg]:shrink-0',
+        't-pill inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full px-2.5 [&_svg]:size-3 [&_svg]:shrink-0',
         badgeTones[tone],
         className,
       )}
@@ -204,8 +202,8 @@ export function Badge({ tone = 'neutral', className, ...props }: React.Component
 }
 
 const calloutTones: Record<Exclude<Tone, 'success'>, { box: string; icon: string }> = {
-  warning: { box: 'bg-warning-soft', icon: 'text-warning' },
-  danger: { box: 'bg-danger-soft', icon: 'text-danger' },
+  warning: { box: 'bg-warning-tint', icon: 'text-warning-ink' },
+  danger: { box: 'bg-danger-tint', icon: 'text-danger' },
   neutral: { box: 'bg-subtle', icon: 'text-fg-muted' },
 }
 
@@ -224,10 +222,10 @@ export function Callout({
 }) {
   const styles = calloutTones[tone]
   return (
-    <div className={cn('flex gap-3 rounded-xl p-3.5 text-sm leading-relaxed text-fg-secondary', styles.box, className)}>
+    <div className={cn('t-small flex gap-2.5 rounded-item px-3.5 py-3 text-fg-secondary', styles.box, className)}>
       {icon != null && <span className={cn('mt-0.5 shrink-0 [&_svg]:size-4', styles.icon)}>{icon}</span>}
       <div className="min-w-0">
-        {title != null && <p className="font-medium text-fg">{title}</p>}
+        {title != null && <p className="font-semibold text-fg">{title}</p>}
         {children}
       </div>
     </div>
@@ -249,7 +247,7 @@ export function InfoPopover({
         <button
           type="button"
           aria-label={label}
-          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-subtle hover:text-fg"
+          className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fg-muted transition-colors hover:bg-subtle hover:text-fg"
         >
           <Info className="size-3.5" />
         </button>
@@ -260,7 +258,7 @@ export function InfoPopover({
           align={align}
           sideOffset={6}
           collisionPadding={12}
-          className="z-50 w-80 max-w-[calc(100vw-24px)] rounded-xl border border-border bg-surface p-4 text-sm text-fg-secondary shadow-lg outline-none animate-pop-in"
+          className={cn(popoverClass, 't-small w-80 max-w-[calc(100vw-24px)] p-4 text-fg-secondary')}
         >
           {children}
         </PopoverPrimitive.Content>
@@ -280,9 +278,9 @@ export function Disclosure({
 }) {
   return (
     <details className={cn('group', className)}>
-      <summary className="inline-flex cursor-pointer items-center gap-1 rounded-md text-sm font-medium text-fg-secondary transition-colors hover:text-fg">
+      <summary className="t-small inline-flex cursor-pointer items-center gap-1 rounded-control font-medium text-accent hover:underline hover:underline-offset-2">
         {summary}
-        <ChevronDown aria-hidden="true" className="size-4 transition-transform group-open:rotate-180" />
+        <ChevronDown aria-hidden="true" className="size-3.5 transition-transform group-open:rotate-180" />
       </summary>
       <div className="mt-3">{children}</div>
     </details>
@@ -290,5 +288,5 @@ export function Disclosure({
 }
 
 export function Swatch({ className }: { className: string }) {
-  return <span aria-hidden="true" className={cn('inline-block size-2.5 shrink-0 rounded-[3px]', className)} />
+  return <span aria-hidden="true" className={cn('inline-block size-2 shrink-0 rounded-full', className)} />
 }
